@@ -1,2 +1,3 @@
-# PawPals
-PawPals – A mobile app for pet owners to share posts, upload pictures, and connect with other pet lovers through local meetups and community features. Built with React Native and Firebase. Integrates Google Gemini 2.5 Flash for chatbot responses and also suggesting recommendations.
+PawPals is a mobile application designed for pet owners who want a dedicated space to connect, share, and build local communities around their pets. The app combines the functionality of a social platform with tools for real-world interaction. Users can create profiles, upload and share pictures, post updates, and engage with others through comments and discussions. In addition to the content-sharing features, PawPals supports the organization of local meetups, allowing pet owners to discover nearby events and connect with like-minded individuals.
+
+The project is built using React Native for a cross-platform mobile experience and Firebase as the backend for authentication, data storage, and media management. Future development plans include integrating AI features such as a chatbot for pet care FAQs and personalized recommendations for potential pet friends and events.
