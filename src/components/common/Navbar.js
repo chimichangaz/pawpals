@@ -1,4 +1,4 @@
-// src/components/common/Navbar.js - Updated with pet navigation
+// src/components/common/Navbar.js - Updated with Forum link
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,7 @@ function Navbar() {
           <a href="/" className="nav-link">Home</a>
           <a href="/browse-pets" className="nav-link">Browse Pets</a>
           <a href="/events" className="nav-link">Events</a>
+          <a href="/forum" className="nav-link">Forum</a> {/* ✅ Added Forum link */}
           
           {currentUser ? (
             <>

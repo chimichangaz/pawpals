@@ -1,4 +1,4 @@
-// src/App.js - Updated with new routes
+// src/App.js - Updated with Forum route
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import Events from './pages/Events';
 import MyPets from './pages/MyPets';
 import BrowsePets from './pages/BrowsePets';
+import Forum from './pages/Forum';  // ✅ Added Forum import
 import './App.css';
 import './styles/pets.css';
 
@@ -28,6 +29,7 @@ function App() {
               <Route path="/events" element={<Events />} />
               <Route path="/my-pets" element={<MyPets />} />
               <Route path="/browse-pets" element={<BrowsePets />} />
+              <Route path="/forum" element={<Forum />} /> {/* ✅ Added Forum route */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
