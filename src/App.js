@@ -12,7 +12,9 @@ import MyPets from './pages/MyPets';
 import BrowsePets from './pages/BrowsePets';
 import Forum from './pages/Forum';  // ✅ Added Forum import
 import './App.css';
+import './styles/base.css';
 import './styles/pets.css';
+import './styles/forum.css';
 
 function App() {
   return (
