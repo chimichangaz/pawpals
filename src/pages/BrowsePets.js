@@ -1,9 +1,11 @@
-// src/pages/BrowsePets.js
+// src/pages/BrowsePets.js - FIXED to exclude current user's pets
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { PetsService } from '../services/pets.service';
 import PetCard from '../components/pets/PetCard';
 
 function BrowsePets() {
+  const { currentUser } = useAuth();
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -13,13 +15,23 @@ function BrowsePets() {
 
   useEffect(() => {
     loadPets();
-  }, []);
+  }, [currentUser]);
 
   async function loadPets() {
     try {
       setLoading(true);
       const allPets = await PetsService.getAllPets();
-      setPets(allPets);
+      
+      // Filter out current user's pets if user is logged in
+      const otherUsersPets = currentUser 
+        ? allPets.filter(pet => pet.ownerId !== currentUser.uid)
+        : allPets;
+      
+      console.log('Total pets found:', allPets.length);
+      console.log('Pets after filtering out own pets:', otherUsersPets.length);
+      console.log('Current user ID:', currentUser?.uid);
+      
+      setPets(otherUsersPets);
     } catch (error) {
       console.error('Error loading pets:', error);
     } finally {
@@ -39,8 +51,15 @@ function BrowsePets() {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1>Browse Pets</h1>
-        <p>Discover pets in your community</p>
+        <div>
+          <h1>Browse Pets</h1>
+          <p>Discover pets in your community</p>
+        </div>
+        {!currentUser && (
+          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            <a href="/login" style={{ color: 'var(--primary-orange)' }}>Sign in</a> to hide your own pets from this view
+          </div>
+        )}
       </div>
 
       <div className="filters-section">
@@ -55,6 +74,9 @@ function BrowsePets() {
             <option value="cat">Cats</option>
             <option value="bird">Birds</option>
             <option value="rabbit">Rabbits</option>
+            <option value="hamster">Hamsters</option>
+            <option value="fish">Fish</option>
+            <option value="reptile">Reptiles</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -76,6 +98,11 @@ function BrowsePets() {
         <>
           <div className="results-count">
             {filteredPets.length} pet{filteredPets.length !== 1 ? 's' : ''} found
+            {currentUser && (
+              <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                (your pets are hidden from this view)
+              </span>
+            )}
           </div>
           
           <div className="pets-grid">
@@ -88,7 +115,17 @@ function BrowsePets() {
             <div className="empty-state">
               <div className="empty-icon">🔍</div>
               <h3>No pets found</h3>
-              <p>Try adjusting your search filters.</p>
+              {currentUser ? (
+                <div>
+                  <p>No other pets match your search filters.</p>
+                  <p>Try adjusting your search or check back later for new pets!</p>
+                </div>
+              ) : (
+                <div>
+                  <p>No pets match your search filters.</p>
+                  <p>Try adjusting your search criteria.</p>
+                </div>
+              )}
             </div>
           )}
         </>
