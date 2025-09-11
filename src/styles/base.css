@@ -841,14 +841,14 @@ textarea:focus,
 .profile-initials {
   font-size: 3rem;
   font-weight: 800;
-  color: white;
+  color: rgb(80, 44, 127);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .profile-info h2 {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: rgb(61, 132, 50);
   margin-bottom: var(--space-xs);
 }
 
@@ -903,7 +903,7 @@ textarea:focus,
 
 .interest-tag {
   background: linear-gradient(135deg, var(--secondary-purple) 0%, #8b5cf6 100%);
-  color: white;
+  color: rgb(228, 23, 23);
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-md);
   font-size: 0.85rem;

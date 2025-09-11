@@ -251,7 +251,7 @@ body {
 }
 
 .profile-info {
-  background: white;
+  background: rgb(155, 140, 196);
   padding: 30px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
