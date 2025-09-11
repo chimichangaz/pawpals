@@ -10,11 +10,11 @@
   --secondary-purple: #7c3aed;
   
   /* Background Colors */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #334155;
-  --bg-glass: rgba(51, 65, 85, 0.8);
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --bg-primary: #acb5ca;
+  --bg-secondary: #a6b6d1;
+  --bg-card: #134280;
+  --bg-glass: rgba(176, 195, 222, 0.8);
+  --bg-gradient: linear-gradient(135deg,#1a2a6c,#b21f1f,#fdbb2d 100%);
   
   /* Text Colors */
   --text-primary: #f8fafc;
@@ -519,6 +519,14 @@ body::before {
   margin-left: auto;
   margin-right: auto;
 }
+.tagline {
+  font-size: 1.25rem;      /* bigger than normal text */
+  font-weight: 500;        /* medium bold */
+  font-style: italic;      /* gives it a motto vibe */
+  color: rgb(59, 57, 48); /* warm golden tone, stands out */
+  margin-top: 0.5rem;
+}
+
 
 .cta-buttons {
   display: flex;
