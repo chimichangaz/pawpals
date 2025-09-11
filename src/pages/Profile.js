@@ -1,10 +1,10 @@
-// src/pages/Profile.js - Updated with Edit Profile functionality
+// src/pages/Profile.js - Updated with improved image upload functionality
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
-import { uploadImage } from '../services/supabase';
+import { uploadImage, uploadImageAsBase64, testSupabaseConnection } from '../services/supabase';
 
 function Profile() {
   const { currentUser, userProfile, getUserProfile } = useAuth();
@@ -13,6 +13,7 @@ function Profile() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [uploadMethod, setUploadMethod] = useState('supabase');
   
   const [formData, setFormData] = useState({
     displayName: '',
@@ -82,23 +83,65 @@ function Profile() {
     }));
   }
 
+  // Image compression function
+  function compressImage(file, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   async function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.log('Selected file:', file);
+    
     try {
       setUploading(true);
       setError('');
       
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Please select a valid image file');
-      }
+      let imageUrl;
       
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('Image size must be less than 5MB');
+      try {
+        // First try Supabase upload
+        console.log('Attempting Supabase upload...');
+        const isConnected = await testSupabaseConnection();
+        if (!isConnected) {
+          throw new Error('Supabase connection failed');
+        }
+        
+        imageUrl = await uploadImage(file, 'profiles');
+        setUploadMethod('supabase');
+        console.log('Supabase upload successful:', imageUrl);
+        
+      } catch (supabaseError) {
+        console.log('Supabase upload failed, trying base64 fallback:', supabaseError);
+        
+        // Fallback to base64 if Supabase fails
+        try {
+          imageUrl = await uploadImageAsBase64(file);
+          setUploadMethod('base64');
+          console.log('Base64 upload successful');
+          
+        } catch (base64Error) {
+          console.error('Both upload methods failed:', base64Error);
+          throw new Error('Unable to upload image. Please try a smaller file or try again later.');
+        }
       }
-
-      const imageUrl = await uploadImage(file, 'profiles');
       
       setFormData(prev => ({
         ...prev,
@@ -146,6 +189,7 @@ function Profile() {
         },
         interests: formData.interests,
         profileImage: formData.profileImage,
+        uploadMethod: uploadMethod, // Track which upload method was used
         updatedAt: new Date()
       });
 
@@ -253,12 +297,16 @@ function Profile() {
                   <input
                     type="file"
                     id="profileImage"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/jpg,image/webp"
                     onChange={handleImageUpload}
                     disabled={uploading}
                     style={{ display: 'none' }}
                   />
-                  <small>JPG, PNG or WebP. Max size 5MB.</small>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                    • Supported formats: JPG, PNG, WebP
+                    • Maximum size: 5MB
+                    • Images will be automatically optimized
+                  </div>
                 </div>
               </div>
 
