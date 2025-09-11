@@ -1,8 +1,8 @@
-// src/pages/Profile.js - Updated with improved image upload functionality
+// src/pages/Profile.js - FIXED VERSION with better error handling
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from 'firebase/auth';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { uploadImage, uploadImageAsBase64, testSupabaseConnection } from '../services/supabase';
 
@@ -83,31 +83,11 @@ function Profile() {
     }));
   }
 
-  // Image compression function
-  function compressImage(file, maxWidth = 800, quality = 0.8) {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        canvas.toBlob(resolve, 'image/jpeg', quality);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
   async function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.log('=== PROFILE IMAGE UPLOAD START ===');
     console.log('Selected file:', file);
     
     try {
@@ -150,9 +130,10 @@ function Profile() {
       
       // Clear the file input
       e.target.value = '';
+      console.log('=== PROFILE IMAGE UPLOAD SUCCESS ===');
       
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('=== PROFILE IMAGE UPLOAD ERROR ===', error);
       setError(error.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
@@ -167,41 +148,90 @@ function Profile() {
       return;
     }
 
+    console.log('=== PROFILE UPDATE START ===');
+    console.log('Form data:', formData);
+    console.log('Current user:', currentUser);
+
     try {
       setLoading(true);
       setError('');
       setSuccess('');
 
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, {
-        displayName: formData.displayName.trim(),
-        photoURL: formData.profileImage
-      });
-
-      // Update Firestore user document
+      // First, ensure the user document exists in Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userDocRef, {
-        displayName: formData.displayName.trim(),
-        bio: formData.bio.trim(),
-        location: {
-          city: formData.location.city.trim(),
-          state: formData.location.state.trim()
-        },
-        interests: formData.interests,
-        profileImage: formData.profileImage,
-        uploadMethod: uploadMethod, // Track which upload method was used
-        updatedAt: new Date()
-      });
+      
+      try {
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          console.log('User document does not exist, creating it...');
+          // Create the document first
+          await setDoc(userDocRef, {
+            email: currentUser.email,
+            displayName: formData.displayName.trim(),
+            bio: formData.bio.trim(),
+            location: {
+              city: formData.location.city.trim(),
+              state: formData.location.state.trim()
+            },
+            interests: formData.interests,
+            profileImage: formData.profileImage,
+            uploadMethod: uploadMethod,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          console.log('User document created successfully');
+        } else {
+          console.log('User document exists, updating...');
+          // Update existing document
+          await updateDoc(userDocRef, {
+            displayName: formData.displayName.trim(),
+            bio: formData.bio.trim(),
+            location: {
+              city: formData.location.city.trim(),
+              state: formData.location.state.trim()
+            },
+            interests: formData.interests,
+            profileImage: formData.profileImage,
+            uploadMethod: uploadMethod,
+            updatedAt: new Date()
+          });
+          console.log('User document updated successfully');
+        }
+      } catch (firestoreError) {
+        console.error('Firestore update error:', firestoreError);
+        throw new Error(`Database update failed: ${firestoreError.message}`);
+      }
+
+      // Then update Firebase Auth profile (separate try-catch)
+      try {
+        console.log('Updating Firebase Auth profile...');
+        await updateProfile(auth.currentUser, {
+          displayName: formData.displayName.trim(),
+          photoURL: formData.profileImage
+        });
+        console.log('Firebase Auth profile updated successfully');
+      } catch (authError) {
+        console.error('Firebase Auth update error:', authError);
+        // Don't throw here - Firestore update succeeded
+        console.log('Auth update failed but Firestore succeeded, continuing...');
+      }
 
       // Refresh the user profile in context
-      await getUserProfile(currentUser.uid);
+      try {
+        await getUserProfile(currentUser.uid);
+        console.log('User profile refreshed successfully');
+      } catch (refreshError) {
+        console.error('Profile refresh error:', refreshError);
+        // Don't throw - the main update succeeded
+      }
       
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
+      console.log('=== PROFILE UPDATE SUCCESS ===');
 
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setError('Failed to update profile. Please try again.');
+      console.error('=== PROFILE UPDATE ERROR ===', error);
+      setError(error.message || 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -278,7 +308,8 @@ function Profile() {
                       alt="Profile"
                       className="profile-image-large"
                       onError={(e) => {
-                        e.target.src = '/api/placeholder/150/150';
+                        console.log('Image failed to load:', formData.profileImage);
+                        e.target.style.display = 'none';
                       }}
                     />
                   ) : (
@@ -302,11 +333,11 @@ function Profile() {
                     disabled={uploading}
                     style={{ display: 'none' }}
                   />
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                    • Supported formats: JPG, PNG, WebP
-                    • Maximum size: 5MB
+                  <small>
+                    • Supported formats: JPG, PNG, WebP<br/>
+                    • Maximum size: 5MB<br/>
                     • Images will be automatically optimized
-                  </div>
+                  </small>
                 </div>
               </div>
 
@@ -424,7 +455,8 @@ function Profile() {
                     alt="Profile"
                     className="profile-image-large"
                     onError={(e) => {
-                      e.target.src = '/api/placeholder/150/150';
+                      console.log('Profile view image failed to load');
+                      e.target.style.display = 'none';
                     }}
                   />
                 ) : (
