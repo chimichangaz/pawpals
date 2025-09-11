@@ -10,7 +10,8 @@ function Home() {
       <div className="hero-section">
         <h1>Welcome to PawPals 🐾</h1>
         <p>Connect with pet owners in your community</p>
-        <p>Connecting pet lovers, one paw at a time.</p>
+        <p className="tagline">Connecting pet lovers, one paw at a time.</p>
+
         {!currentUser && (
           <div className="cta-buttons">
             <a href="/register" className="btn btn-primary">Join PawPals</a>
