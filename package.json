@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@google/genai": "^1.19.0",
     "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.1.13",
     "@testing-library/dom": "^10.4.1",
