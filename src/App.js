@@ -1,4 +1,4 @@
-// src/App.js - Updated with Forum route
+// src/App.js - Updated with Forum route + Chatbot
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -15,6 +15,7 @@ import './App.css';
 import './styles/base.css';
 import './styles/pets.css';
 import './styles/forum.css';
+import PetChatbot from './components/PetChatbot';
 
 function App() {
   return (
@@ -35,6 +36,9 @@ function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
+
+          {/* ✅ Floating chatbot button */}
+          <PetChatbot />
         </div>
       </Router>
     </AuthProvider>
