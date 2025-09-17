@@ -1823,3 +1823,11 @@ body::before {
     gap: 1.5rem !important;
   }
 }
+.chatbot-container {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+.chatbot-container * {
+  z-index: inherit !important;
+}

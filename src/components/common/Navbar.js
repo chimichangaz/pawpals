@@ -1,7 +1,7 @@
-// src/components/common/Navbar.js - Updated with Forum link
+// src/components/common/Navbar.js
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -20,27 +20,28 @@ function Navbar() {
     <nav className="navbar">
       <div className="nav-container">
         <div className="nav-brand">
-          <a href="/">🐾 PawPals</a>
+          <Link to="/">🐾 PawPals</Link>
         </div>
-        
+
         <div className="nav-menu">
-          <a href="/" className="nav-link">Home</a>
-          <a href="/browse-pets" className="nav-link">Browse Pets</a>
-          <a href="/events" className="nav-link">Events</a>
-          <a href="/forum" className="nav-link">Forum</a> {/* ✅ Added Forum link */}
-          
+          <Link to="/" className="nav-link">Home</Link>
+          <Link to="/browse-pets" className="nav-link">Browse Pets</Link>
+          <Link to="/events" className="nav-link">Events</Link>
+          <Link to="/vetclinics" className="nav-link">Vet Clinics</Link>
+          <Link to="/forum" className="nav-link">Forum</Link>
+
           {currentUser ? (
             <>
-              <a href="/my-pets" className="nav-link">My Pets</a>
-              <a href="/profile" className="nav-link">Profile</a>
+              <Link to="/my-pets" className="nav-link">My Pets</Link>
+              <Link to="/profile" className="nav-link">Profile</Link>
               <button onClick={handleLogout} className="nav-link btn-link">
                 Sign Out
               </button>
             </>
           ) : (
             <>
-              <a href="/login" className="nav-link">Sign In</a>
-              <a href="/register" className="nav-link btn-primary">Join</a>
+              <Link to="/login" className="nav-link">Sign In</Link>
+              <Link to="/register" className="nav-link btn-primary">Join</Link>
             </>
           )}
         </div>

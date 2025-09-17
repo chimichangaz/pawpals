@@ -153,7 +153,7 @@ User's question: ${inputMessage}
           position: 'fixed',
           bottom: '1.5rem',
           right: '1.5rem',
-          zIndex: 50
+          zIndex: 9999
         }}
       >
         <button
