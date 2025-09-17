@@ -97,7 +97,7 @@ const PetChatbot = () => {
       const siteContext = `
 You are the Pet Assistant chatbot for a pet adoption website.
 Only answer about pets, adoption, and site features and vet clinics in Bangalore.
-Never answer unrelated questions.
+Never answer unrelated questions.You can answer questions in the language the user asks their question in.
 
 Here is the current pet database:
 ${JSON.stringify(pets, null, 2)}
@@ -105,7 +105,7 @@ ${JSON.stringify(pets, null, 2)}
 User's question: ${inputMessage}
 `;
 
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent(siteContext);
       const text = result.response.text();
 
