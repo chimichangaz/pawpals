@@ -137,130 +137,118 @@ function Events() {
             <span className="text-4xl">🐾</span>
             Community Events
           </h1>
-          <p className="text-gray-600 mt-2">Create and discover pet-friendly events in your area</p>
+          <p className="text-gray-600 mt-2">
+            Create and discover pet-friendly events in your area
+          </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Event Creation Form */}
+          {/* Event Creation Form - Premium Layout */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-lg">✨</span>
-                </div>
-                <h2 className="text-xl font-semibold text-gray-800">Create New Event</h2>
-              </div>
+            <div className="form-container">
+              {/* Left image panel */}
+              <div className="form-image"></div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Event Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Event Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Dog Park Meetup"
-                    value={newEvent.name}
-                    onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    placeholder="Tell us about your event..."
-                    value={newEvent.description}
-                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                    required
-                    rows="3"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 resize-none"
-                  />
-                </div>
-
-                {/* Date & Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date & Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={newEvent.datetime}
-                    onChange={(e) => setNewEvent({ ...newEvent, datetime: e.target.value })}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
-
-                {/* Location Section */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-lg">📍</span>
-                    <h3 className="font-medium text-gray-800">Event Location</h3>
+              {/* Right form panel */}
+              <div className="form-content">
+                <h2>Create New Event</h2>
+                <form onSubmit={handleSubmit}>
+                  {/* Event Name */}
+                  <div className="form-group">
+                    <label>Event Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Dog Park Meetup"
+                      value={newEvent.name}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, name: e.target.value })
+                      }
+                      required
+                    />
                   </div>
-                  
-                  {selectedLocation ? (
-                    <div className="space-y-3">
-                      <div className="bg-white rounded-lg p-3 border border-green-200">
-                        <div className="flex items-center gap-2 text-green-700 mb-2">
-                          <span className="text-lg">✅</span>
-                          <span className="font-medium">Location Selected</span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          <div>Latitude: {newEvent.lat}</div>
-                          <div>Longitude: {newEvent.lng}</div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={clearLocation}
-                        className="w-full py-2 px-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 text-sm font-medium"
-                      >
-                        🔄 Choose Different Location
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <div className="text-orange-600 mb-2">
-                        <span className="text-2xl">🗺️</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Click on the map to select your event location
-                      </p>
-                    </div>
-                  )}
-                </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !selectedLocation}
-                  className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${
-                    isSubmitting || !selectedLocation
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Creating Event...
-                    </div>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="text-lg">🎉</span>
-                      Create Event
-                    </span>
-                  )}
-                </button>
-              </form>
+                  {/* Description */}
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      placeholder="Tell us about your event..."
+                      value={newEvent.description}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, description: e.target.value })
+                      }
+                      required
+                      rows="3"
+                    ></textarea>
+                  </div>
+
+                  {/* Date & Time */}
+                  <div className="form-group">
+                    <label>Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      value={newEvent.datetime}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, datetime: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+
+                  {/* Location Section */}
+                  <div className="form-group">
+                    <label>Event Location</label>
+                    {selectedLocation ? (
+                      <div className="bg-green-100 text-green-800 p-3 rounded-lg mb-3">
+                        <div>✅ Location Selected</div>
+                        <div className="text-sm">
+                          Latitude: {newEvent.lat} <br />
+                          Longitude: {newEvent.lng}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearLocation}
+                          className="btn btn-secondary mt-2"
+                        >
+                          🔄 Choose Different Location
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">
+                        Click on the map to select a location
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() =>
+                        setNewEvent({
+                          name: "",
+                          description: "",
+                          datetime: "",
+                          lat: "",
+                          lng: "",
+                        })
+                      }
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={isSubmitting || !selectedLocation}
+                    >
+                      {isSubmitting ? "Creating..." : "Create Event"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
 
@@ -272,7 +260,9 @@ function Events() {
                   <span className="text-2xl">🗺️</span>
                   <div>
                     <h2 className="text-xl font-semibold">Interactive Map</h2>
-                    <p className="text-blue-100 text-sm">Click anywhere to set your event location</p>
+                    <p className="text-blue-100 text-sm">
+                      Click anywhere to set your event location
+                    </p>
                   </div>
                 </div>
               </div>
@@ -289,10 +279,10 @@ function Events() {
                       attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    
+
                     {/* Handle map clicks */}
                     <MapClickHandler onMapClick={handleMapClick} />
-                    
+
                     {/* Show existing events */}
                     {events.map((event) => (
                       <Marker
@@ -302,8 +292,12 @@ function Events() {
                       >
                         <Popup className="custom-popup">
                           <div className="p-2">
-                            <h3 className="font-semibold text-gray-800 mb-2">{event.name}</h3>
-                            <p className="text-gray-600 text-sm mb-2">{event.description}</p>
+                            <h3 className="font-semibold text-gray-800 mb-2">
+                              {event.name}
+                            </h3>
+                            <p className="text-gray-600 text-sm mb-2">
+                              {event.description}
+                            </p>
                             <div className="text-xs text-gray-500 space-y-1">
                               <div className="flex items-center gap-1">
                                 <span>📅</span>
@@ -320,17 +314,29 @@ function Events() {
                         </Popup>
                       </Marker>
                     ))}
-                    
+
                     {/* Show selected location for new event */}
                     {selectedLocation && (
-                      <Marker position={[selectedLocation.lat, selectedLocation.lng]} icon={newEventIcon}>
+                      <Marker
+                        position={[
+                          selectedLocation.lat,
+                          selectedLocation.lng,
+                        ]}
+                        icon={newEventIcon}
+                      >
                         <Popup>
                           <div className="p-2 text-center">
                             <div className="text-lg mb-2">📍</div>
-                            <h3 className="font-semibold text-red-600 mb-1">New Event Location</h3>
+                            <h3 className="font-semibold text-red-600 mb-1">
+                              New Event Location
+                            </h3>
                             <div className="text-xs text-gray-500">
-                              <div>Lat: {selectedLocation.lat.toFixed(6)}</div>
-                              <div>Lng: {selectedLocation.lng.toFixed(6)}</div>
+                              <div>
+                                Lat: {selectedLocation.lat.toFixed(6)}
+                              </div>
+                              <div>
+                                Lng: {selectedLocation.lng.toFixed(6)}
+                              </div>
                             </div>
                           </div>
                         </Popup>
@@ -341,35 +347,29 @@ function Events() {
 
                 {/* Map Instructions Overlay */}
                 {!selectedLocation && (
-                  <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
-                        💡
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">Click anywhere on the map to select your event location</p>
-                        <p className="text-xs text-gray-600">The selected location will appear as a red marker</p>
-                      </div>
-                    </div>
+                  <div className="absolute top-4 left-4 right-4 map-instructions slide-in-left">
+                    <h3 className="premium-heading">💡 How to Select Location</h3>
+                    <p>Click anywhere on the map to select your event location.</p>
+                    <p>
+                      The selected location will appear as a <strong>red marker</strong>.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Events Counter */}
-            <div className="mt-6 bg-white rounded-xl shadow-lg p-4 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">📊</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">Event Statistics</h3>
-                    <p className="text-sm text-gray-600">Upcoming events in your area</p>
-                  </div>
+            <div className="stats-card slide-in-right">
+              <div className="flex items-center gap-3">
+                <div className="stats-icon">📊</div>
+                <div>
+                  <h3 className="premium-heading">Event Statistics</h3>
+                  <p>Upcoming events in your area</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{events.length}</div>
-                  <div className="text-xs text-gray-500">Active Events</div>
-                </div>
+              </div>
+              <div className="text-right">
+                <div className="premium-number">{events.length}</div>
+                <div className="text-xs text-gray-400">Active Events</div>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-// src/pages/Profile.js - FIXED VERSION with better error handling
+// src/pages/Profile.js - COMPLETE VERSION with Enhanced Background
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from 'firebase/auth';
@@ -258,57 +258,207 @@ function Profile() {
 
   if (!currentUser) {
     return (
-      <div className="page-container">
-        <div className="empty-state">
-          <h3>Please sign in to view your profile</h3>
-          <p>You need to be logged in to access your profile page.</p>
-          <a href="/login" className="btn btn-primary">Sign In</a>
+      <div className="profile-page-background">
+        <div className="page-container">
+          <div className="empty-state">
+            <h3>Please sign in to view your profile</h3>
+            <p>You need to be logged in to access your profile page.</p>
+            <a href="/login" className="btn btn-primary">Sign In</a>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>My Profile</h1>
-          <p>Manage your PawPals profile and preferences</p>
+    <div className="profile-page-background">
+      <div className="page-container">
+        <div className="page-header">
+          <div>
+            <h1>My Profile</h1>
+            <p>Manage your PawPals profile and preferences</p>
+          </div>
+          {!isEditing && (
+            <button 
+              onClick={() => setIsEditing(true)} 
+              className="btn btn-primary"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
-        {!isEditing && (
-          <button 
-            onClick={() => setIsEditing(true)} 
-            className="btn btn-primary"
-          >
-            Edit Profile
-          </button>
+
+        {error && (
+          <div className="error-message">{error}</div>
         )}
-      </div>
 
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
+        {success && (
+          <div className="success-message">
+            {success}
+          </div>
+        )}
 
-      {success && (
-        <div className="success-message">
-          {success}
-        </div>
-      )}
+        <div className="profile-container">
+          {isEditing ? (
+            <div className="profile-edit-form">
+              <form onSubmit={handleSubmit}>
+                {/* Profile Image Section */}
+                <div className="profile-image-section">
+                  <div className="current-profile-image">
+                    {formData.profileImage ? (
+                      <img 
+                        src={formData.profileImage} 
+                        alt="Profile"
+                        className="profile-image-large"
+                        onError={(e) => {
+                          console.log('Image failed to load:', formData.profileImage);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="profile-placeholder-large">
+                        <span className="profile-initials">
+                          {formData.displayName ? formData.displayName.charAt(0).toUpperCase() : 'U'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="image-upload-section">
+                    <label htmlFor="profileImage" className="btn btn-secondary">
+                      {uploading ? 'Uploading...' : 'Change Photo'}
+                    </label>
+                    <input
+                      type="file"
+                      id="profileImage"
+                      accept="image/jpeg,image/png,image/jpg,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      style={{ display: 'none' }}
+                    />
+                    <small>
+                      • Supported formats: JPG, PNG, WebP<br/>
+                      • Maximum size: 5MB<br/>
+                      • Images will be automatically optimized
+                    </small>
+                  </div>
+                </div>
 
-      <div className="profile-container">
-        {isEditing ? (
-          <div className="profile-edit-form">
-            <form onSubmit={handleSubmit}>
-              {/* Profile Image Section */}
-              <div className="profile-image-section">
-                <div className="current-profile-image">
+                {/* Basic Info */}
+                <div className="form-section">
+                  <h3>Basic Information</h3>
+                  
+                  <div className="form-group">
+                    <label htmlFor="displayName">Display Name *</label>
+                    <input
+                      type="text"
+                      id="displayName"
+                      name="displayName"
+                      value={formData.displayName}
+                      onChange={handleChange}
+                      required
+                      maxLength={50}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="bio">Bio</label>
+                    <textarea
+                      id="bio"
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleChange}
+                      rows="4"
+                      maxLength={500}
+                      placeholder="Tell other pet owners about yourself..."
+                    />
+                    <small>{formData.bio.length}/500 characters</small>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="form-section">
+                  <h3>Location</h3>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="location.city">City</label>
+                      <input
+                        type="text"
+                        id="location.city"
+                        name="location.city"
+                        value={formData.location.city}
+                        onChange={handleChange}
+                        maxLength={50}
+                        placeholder="Enter your city"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="location.state">State/Region</label>
+                      <input
+                        type="text"
+                        id="location.state"
+                        name="location.state"
+                        value={formData.location.state}
+                        onChange={handleChange}
+                        maxLength={50}
+                        placeholder="Enter your state or region"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interests */}
+                <div className="form-section">
+                  <h3>Pet Interests</h3>
+                  <p className="form-description">
+                    Select your pet-related interests to connect with like-minded owners
+                  </p>
+                  <div className="interests-grid">
+                    {petInterests.map(interest => (
+                      <label key={interest} className="interest-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={formData.interests.includes(interest)}
+                          onChange={() => handleInterestToggle(interest)}
+                        />
+                        <span>{interest}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="form-actions">
+                  <button 
+                    type="button" 
+                    onClick={cancelEdit}
+                    className="btn btn-secondary"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={loading || uploading}
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="profile-view">
+              <div className="profile-header">
+                <div className="profile-image-container">
                   {formData.profileImage ? (
                     <img 
                       src={formData.profileImage} 
                       alt="Profile"
                       className="profile-image-large"
                       onError={(e) => {
-                        console.log('Image failed to load:', formData.profileImage);
+                        console.log('Profile view image failed to load');
                         e.target.style.display = 'none';
                       }}
                     />
@@ -321,198 +471,52 @@ function Profile() {
                   )}
                 </div>
                 
-                <div className="image-upload-section">
-                  <label htmlFor="profileImage" className="btn btn-secondary">
-                    {uploading ? 'Uploading...' : 'Change Photo'}
-                  </label>
-                  <input
-                    type="file"
-                    id="profileImage"
-                    accept="image/jpeg,image/png,image/jpg,image/webp"
-                    onChange={handleImageUpload}
-                    disabled={uploading}
-                    style={{ display: 'none' }}
-                  />
-                  <small>
-                    • Supported formats: JPG, PNG, WebP<br/>
-                    • Maximum size: 5MB<br/>
-                    • Images will be automatically optimized
-                  </small>
+                <div className="profile-info">
+                  <h2>{formData.displayName || 'No name set'}</h2>
+                  <p className="profile-email">{currentUser.email}</p>
+                  {formData.location.city && (
+                    <p className="profile-location">
+                      📍 {formData.location.city}
+                      {formData.location.state && `, ${formData.location.state}`}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Basic Info */}
-              <div className="form-section">
-                <h3>Basic Information</h3>
-                
-                <div className="form-group">
-                  <label htmlFor="displayName">Display Name *</label>
-                  <input
-                    type="text"
-                    id="displayName"
-                    name="displayName"
-                    value={formData.displayName}
-                    onChange={handleChange}
-                    required
-                    maxLength={50}
-                  />
+              {formData.bio && (
+                <div className="profile-section">
+                  <h3>About Me</h3>
+                  <p className="profile-bio">{formData.bio}</p>
                 </div>
+              )}
 
-                <div className="form-group">
-                  <label htmlFor="bio">Bio</label>
-                  <textarea
-                    id="bio"
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleChange}
-                    rows="4"
-                    maxLength={500}
-                    placeholder="Tell other pet owners about yourself..."
-                  />
-                  <small>{formData.bio.length}/500 characters</small>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="form-section">
-                <h3>Location</h3>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="location.city">City</label>
-                    <input
-                      type="text"
-                      id="location.city"
-                      name="location.city"
-                      value={formData.location.city}
-                      onChange={handleChange}
-                      maxLength={50}
-                      placeholder="Enter your city"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="location.state">State/Region</label>
-                    <input
-                      type="text"
-                      id="location.state"
-                      name="location.state"
-                      value={formData.location.state}
-                      onChange={handleChange}
-                      maxLength={50}
-                      placeholder="Enter your state or region"
-                    />
+              {formData.interests.length > 0 && (
+                <div className="profile-section">
+                  <h3>Pet Interests</h3>
+                  <div className="interests-display">
+                    {formData.interests.map(interest => (
+                      <span key={interest} className="interest-tag">
+                        {interest}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Interests */}
-              <div className="form-section">
-                <h3>Pet Interests</h3>
-                <p className="form-description">
-                  Select your pet-related interests to connect with like-minded owners
-                </p>
-                <div className="interests-grid">
-                  {petInterests.map(interest => (
-                    <label key={interest} className="interest-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={formData.interests.includes(interest)}
-                        onChange={() => handleInterestToggle(interest)}
-                      />
-                      <span>{interest}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="form-actions">
+              <div className="profile-actions">
                 <button 
-                  type="button" 
-                  onClick={cancelEdit}
-                  className="btn btn-secondary"
-                  disabled={loading}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
+                  onClick={() => setIsEditing(true)}
                   className="btn btn-primary"
-                  disabled={loading || uploading}
                 >
-                  {loading ? 'Saving...' : 'Save Changes'}
+                  Edit Profile
                 </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="profile-view">
-            <div className="profile-header">
-              <div className="profile-image-container">
-                {formData.profileImage ? (
-                  <img 
-                    src={formData.profileImage} 
-                    alt="Profile"
-                    className="profile-image-large"
-                    onError={(e) => {
-                      console.log('Profile view image failed to load');
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="profile-placeholder-large">
-                    <span className="profile-initials">
-                      {formData.displayName ? formData.displayName.charAt(0).toUpperCase() : 'U'}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="profile-info">
-                <h2>{formData.displayName || 'No name set'}</h2>
-                <p className="profile-email">{currentUser.email}</p>
-                {formData.location.city && (
-                  <p className="profile-location">
-                    {formData.location.city}
-                    {formData.location.state && `, ${formData.location.state}`}
-                  </p>
-                )}
+                <a href="/my-pets" className="btn btn-secondary">
+                  My Pets
+                </a>
               </div>
             </div>
-
-            {formData.bio && (
-              <div className="profile-section">
-                <h3>About Me</h3>
-                <p className="profile-bio">{formData.bio}</p>
-              </div>
-            )}
-
-            {formData.interests.length > 0 && (
-              <div className="profile-section">
-                <h3>Pet Interests</h3>
-                <div className="interests-display">
-                  {formData.interests.map(interest => (
-                    <span key={interest} className="interest-tag">
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="profile-actions">
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="btn btn-primary"
-              >
-                Edit Profile
-              </button>
-              <a href="/my-pets" className="btn btn-secondary">
-                My Pets
-              </a>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
