@@ -96,7 +96,7 @@ const PetChatbot = () => {
       // 2. Gemini with pets context
       const siteContext = `
 You are the Pet Assistant chatbot for a pet adoption website.
-Only answer about pets, adoption, and site features.
+Only answer about pets, adoption, and site features and vet clinics in Bangalore.
 Never answer unrelated questions.
 
 Here is the current pet database:

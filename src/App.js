@@ -17,6 +17,8 @@ import './styles/base.css';
 import './styles/pets.css';
 import './styles/forum.css';
 import PetChatbot from './components/PetChatbot';
+import FAQ from './pages/FAQ';  // ✅ New import
+
 
 function App() {
   return (
@@ -36,6 +38,8 @@ function App() {
               <Route path="/browse-pets" element={<BrowsePets />} />
               <Route path="/forum" element={<Forum />} />
               <Route path="*" element={<Navigate to="/" />} />
+              <Route path="/faq" element={<FAQ />} /> {/* ✅ FAQ route */}
+
             </Routes>
           </main>
 
