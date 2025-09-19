@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Bot, User, X, MessageCircle, RefreshCw, Sparkles, Heart } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { petsService } from "../services/pets.services2"; // ✅ Your Firestore service
+import { eventsService } from "../services/events.service"; // ✅ Added events service
 
 // Init Gemini with your API key
 const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
@@ -10,7 +11,7 @@ const PetChatbot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hi! I'm your Pet Assistant 🐾. I can answer FAQs and suggest pets based on our database. What would you like to know?",
+      text: "Hi! I'm your Pet Assistant 🐾. I can answer FAQs, suggest pets, and help you find events in our database. What would you like to know?",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -19,7 +20,9 @@ const PetChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pets, setPets] = useState([]);
+  const [events, setEvents] = useState([]); // ✅ Added events state
   const [loadingPets, setLoadingPets] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true); // ✅ Added events loading state
 
   const messagesEndRef = useRef(null);
 
@@ -39,28 +42,52 @@ const PetChatbot = () => {
     fetchPets();
   }, []);
 
+  // ✅ Fetch events from Firestore
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoadingEvents(true);
+        const eventsData = await eventsService.getAllEvents();
+        setEvents(eventsData);
+      } catch (err) {
+        console.error("Error fetching events:", err);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // FAQs
+  // ✅ Updated FAQs to include events
   const faqResponses = {
     "how to add pet": 'To add a pet, go to your Profile and click "Add Pet". Fill in details like name, type, traits, and upload a photo.',
     "matching pets": "We consider traits, type, and location to suggest matches. Try asking: 'Recommend a friendly dog'",
     "forum help": "In the Forum, you can create posts, reply to discussions, and connect with other owners.",
     "account settings": "In your Profile you can update details, change email preferences, and manage your pets.",
     "safety tips": "Always meet in public places, verify vaccination records, and trust your instincts.",
+    "events help": "You can find pet-related events, meetups, and activities. Ask me about upcoming events or events in specific locations!",
+    "create event": "To create an event, go to the Events section and click 'Create Event'. Add details like date, location, and description.",
+    "upcoming events": "I can show you upcoming events from our database. Just ask 'What events are coming up?'"
   };
 
-  // Check FAQ match
+  // ✅ Updated FAQ matching to be more specific for events
   const findFAQ = (msg) => {
     const lower = msg.toLowerCase();
     if (lower.includes("add pet")) return "how to add pet";
-    if (lower.includes("match")) return "matching pets";
+    if (lower.includes("match") && !lower.includes("event")) return "matching pets";
     if (lower.includes("forum")) return "forum help";
     if (lower.includes("account") || lower.includes("profile")) return "account settings";
     if (lower.includes("safety")) return "safety tips";
-    return null;
+    
+    // Only match exact FAQ phrases for events, not general event queries
+    if (lower === "create event" || lower === "how to create event") return "create event";
+    if (lower === "events help" || lower === "help with events") return "events help";
+    
+    return null; // Let all other event queries go to AI
   };
 
   // Handle send
@@ -93,14 +120,42 @@ const PetChatbot = () => {
         return;
       }
 
-      // 2. Gemini with pets context
+      // ✅ 2. Updated Gemini context with both pets and events data
       const siteContext = `
 You are the Pet Assistant chatbot for a pet adoption website.
-Only answer about pets, adoption, and site features and vet clinics in Bangalore.
-Never answer unrelated questions.You can answer questions in the language the user asks their question in.
+Only answer about pets, adoption, events, meetups, and site features and vet clinics in Bangalore.
+Never answer unrelated questions. You can answer questions in the language the user asks their question in.
 
 Here is the current pet database:
 ${JSON.stringify(pets, null, 2)}
+
+Here is the current events database:
+${JSON.stringify(events, null, 2)}
+
+IMPORTANT FORMATTING GUIDELINES:
+- Use friendly, conversational language
+- Format dates in a readable way (e.g., "September 15th at 10:00 AM")
+- Convert coordinates to readable locations when possible (e.g., "Cubbon Park area" instead of raw coordinates)
+- Use emojis to make responses more engaging
+- Keep responses concise but informative
+- Use bullet points or numbered lists for multiple items
+- Don't show technical details like exact coordinates or email addresses unless specifically asked
+
+For events, format responses like:
+"🎉 Here are the upcoming pet events in Bangalore:
+
+📅 **Event Name** - Date at Time
+📍 Location description
+💬 Brief description
+
+📅 **Another Event** - Date at Time  
+📍 Location description
+💬 Brief description"
+
+For pets, format responses conversationally:
+"🐾 I found some great dogs for you! Here's **Pet Name**, a friendly [breed] who loves [personality traits]. There's also **Another Pet**, a [breed] known for being [traits]."
+
+Always be helpful, friendly, and focus on what users care about most.
 
 User's question: ${inputMessage}
 `;
@@ -268,7 +323,8 @@ User's question: ${inputMessage}
                 fontSize: '0.75rem',
                 margin: 0 
               }}>
-                {loadingPets ? "Loading pets..." : `${pets.length} pets available`}
+                {/* ✅ Updated status to show both pets and events */}
+                {loadingPets || loadingEvents ? "Loading data..." : `${pets.length} pets • ${events.length} events`}
               </p>
             </div>
           </div>
@@ -436,7 +492,7 @@ User's question: ${inputMessage}
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask about pets, adoption, or site features..."
+                placeholder="Ask about pets, adoption, events, or site features..." // ✅ Updated placeholder
                 className="form-group input"
                 style={{
                   width: '100%',
