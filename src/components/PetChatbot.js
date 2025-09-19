@@ -4,7 +4,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { petsService } from "../services/pets.services2"; // ✅ Your Firestore service
 import { eventsService } from "../services/events.service"; // ✅ Added events service
 
-// Init Gemini with your API key
 const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
 
 const PetChatbot = () => {
@@ -26,7 +25,6 @@ const PetChatbot = () => {
 
   const messagesEndRef = useRef(null);
 
-  // Fetch pets from Firestore
   useEffect(() => {
     const fetchPets = async () => {
       try {
@@ -42,7 +40,6 @@ const PetChatbot = () => {
     fetchPets();
   }, []);
 
-  // ✅ Fetch events from Firestore
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -74,7 +71,6 @@ const PetChatbot = () => {
     "upcoming events": "I can show you upcoming events from our database. Just ask 'What events are coming up?'"
   };
 
-  // ✅ Updated FAQ matching to be more specific for events
   const findFAQ = (msg) => {
     const lower = msg.toLowerCase();
     if (lower.includes("add pet")) return "how to add pet";
@@ -156,7 +152,7 @@ For pets, format responses conversationally:
 "🐾 I found some great dogs for you! Here's **Pet Name**, a friendly [breed] who loves [personality traits]. There's also **Another Pet**, a [breed] known for being [traits]."
 
 Always be helpful, friendly, and focus on what users care about most.
-
+If a question involves asking for nearest vet clinics please ask them for their location and then check the nearest veterinary clinics based on your knowledge. 
 User's question: ${inputMessage}
 `;
 
