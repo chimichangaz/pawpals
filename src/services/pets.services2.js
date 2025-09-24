@@ -62,8 +62,7 @@ export const petsService = {
   async getPetsByPersonality(traits) {
     try {
       const petsCollection = collection(db, 'pets');
-      // Note: Firestore array-contains only works with one value
-      // For multiple traits, we'll fetch all and filter client-side
+    
       const querySnapshot = await getDocs(petsCollection);
       
       const pets = [];
