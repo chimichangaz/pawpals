@@ -12,6 +12,11 @@ import {
   where,
   serverTimestamp,
   Timestamp,
+  orderBy,
+  getDocs,
+  deleteDoc,
+  doc,
+  writeBatch
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
@@ -53,21 +58,93 @@ function Events() {
   });
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cleanupStats, setCleanupStats] = useState({ cleaned: 0, lastCleanup: null });
 
-  // Fetch events in real-time
+  // Function to clean up past events
+  const cleanupPastEvents = async () => {
+    try {
+      console.log("Starting cleanup of past events...");
+      
+      // Get current time minus 1 hour buffer (to avoid deleting events that just ended)
+      const bufferTime = new Date();
+      bufferTime.setHours(bufferTime.getHours() - 1);
+      const cutoffTime = Timestamp.fromDate(bufferTime);
+
+      // Query for events that are past the cutoff time
+      const pastEventsQuery = query(
+        collection(db, "events"),
+        where("datetime", "<", cutoffTime),
+        orderBy("datetime")
+      );
+
+      const pastEventsSnapshot = await getDocs(pastEventsQuery);
+      
+      if (pastEventsSnapshot.empty) {
+        console.log("No past events to clean up");
+        return 0;
+      }
+
+      // Use batch to delete multiple documents efficiently
+      const batch = writeBatch(db);
+      let deleteCount = 0;
+
+      pastEventsSnapshot.forEach((docSnapshot) => {
+        batch.delete(doc(db, "events", docSnapshot.id));
+        deleteCount++;
+        console.log(`Scheduled for deletion: ${docSnapshot.data().name} - ${docSnapshot.data().datetime.toDate()}`);
+      });
+
+      // Execute the batch delete
+      await batch.commit();
+      
+      console.log(`Successfully deleted ${deleteCount} past events`);
+      
+      // Update cleanup stats
+      setCleanupStats({
+        cleaned: deleteCount,
+        lastCleanup: new Date().toLocaleString()
+      });
+
+      return deleteCount;
+
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+      return 0;
+    }
+  };
+
+  // Fetch events in real-time (only future events)
   useEffect(() => {
+    // First, run cleanup when component mounts
+    cleanupPastEvents();
+
+    // Then set up real-time listener for future events
     const now = Timestamp.now();
-    const q = query(collection(db, "events"), where("datetime", ">", now));
+    const q = query(
+      collection(db, "events"), 
+      where("datetime", ">", now),
+      orderBy("datetime", "asc")
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
+      
+      console.log(`Loaded ${eventsData.length} upcoming events`);
       setEvents(eventsData);
     });
 
-    return () => unsubscribe();
+    // Set up periodic cleanup (every 30 minutes)
+    const cleanupInterval = setInterval(() => {
+      cleanupPastEvents();
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => {
+      unsubscribe();
+      clearInterval(cleanupInterval);
+    };
   }, []);
 
   // Handle map click
@@ -103,12 +180,21 @@ function Events() {
       return;
     }
 
+    // Validate that the event is in the future
+    const eventDate = new Date(newEvent.datetime);
+    const now = new Date();
+    
+    if (eventDate <= now) {
+      alert("Please select a future date and time for your event.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "events"), {
         name: newEvent.name,
         description: newEvent.description,
-        datetime: Timestamp.fromDate(new Date(newEvent.datetime)),
+        datetime: Timestamp.fromDate(eventDate),
         coords: {
           lat: parseFloat(newEvent.lat),
           lng: parseFloat(newEvent.lng),
@@ -128,18 +214,44 @@ function Events() {
     }
   };
 
+  // Manual cleanup trigger (for admin/testing)
+  const handleManualCleanup = async () => {
+    const deletedCount = await cleanupPastEvents();
+    alert(`Cleanup completed! Deleted ${deletedCount} past events.`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <span className="text-4xl">🐾</span>
-            Community Events
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Create and discover pet-friendly events in your area
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <span className="text-4xl">🐾</span>
+                Community Events
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Create and discover pet-friendly events in your area
+              </p>
+            </div>
+            
+            {/* Cleanup Stats & Manual Trigger */}
+            <div className="text-right text-sm text-gray-500">
+              {cleanupStats.lastCleanup && (
+                <div className="mb-2">
+                  <div>Last cleanup: {cleanupStats.lastCleanup}</div>
+                  <div>Events cleaned: {cleanupStats.cleaned}</div>
+                </div>
+              )}
+              <button
+                onClick={handleManualCleanup}
+                className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs hover:bg-red-200 transition-colors"
+              >
+                🗑️ Manual Cleanup
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -193,8 +305,12 @@ function Events() {
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, datetime: e.target.value })
                       }
+                      min={new Date().toISOString().slice(0, 16)} // Prevent past dates
                       required
                     />
+                    <small className="text-gray-500 text-xs">
+                      Event must be scheduled for future date/time
+                    </small>
                   </div>
 
                   {/* Location Section */}
@@ -227,15 +343,16 @@ function Events() {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() =>
+                      onClick={() => {
                         setNewEvent({
                           name: "",
                           description: "",
                           datetime: "",
                           lat: "",
                           lng: "",
-                        })
-                      }
+                        });
+                        setSelectedLocation(null);
+                      }}
                     >
                       Cancel
                     </button>
@@ -261,7 +378,7 @@ function Events() {
                   <div>
                     <h2 className="text-xl font-semibold">Interactive Map</h2>
                     <p className="text-blue-100 text-sm">
-                      Click anywhere to set your event location
+                      Click anywhere to set your event location • Showing {events.length} upcoming events
                     </p>
                   </div>
                 </div>
@@ -303,11 +420,15 @@ function Events() {
                                 <span>📅</span>
                                 {event.datetime?.toDate
                                   ? event.datetime.toDate().toLocaleString()
-                                  : ""}
+                                  : "Date not available"}
                               </div>
                               <div className="flex items-center gap-1">
                                 <span>👤</span>
                                 {event.createdby}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span>⏰</span>
+                                <span className="text-green-600 font-medium">Upcoming</span>
                               </div>
                             </div>
                           </div>
@@ -358,18 +479,21 @@ function Events() {
               </div>
             </div>
 
-            {/* Events Counter */}
+            {/* Events Counter with Cleanup Info */}
             <div className="stats-card slide-in-right">
               <div className="flex items-center gap-3">
                 <div className="stats-icon">📊</div>
                 <div>
                   <h3 className="premium-heading">Event Statistics</h3>
-                  <p>Upcoming events in your area</p>
+                  <p>Upcoming events • Auto-cleanup enabled</p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="premium-number">{events.length}</div>
                 <div className="text-xs text-gray-400">Active Events</div>
+                <div className="text-xs text-green-600 mt-1">
+                  🗑️ Past events auto-deleted
+                </div>
               </div>
             </div>
           </div>

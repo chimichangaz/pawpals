@@ -95,6 +95,7 @@ function Navbar() {
             <Link to="/events" className="nav-link" style={navLinkStyle}>Events</Link>
             <Link to="/vetclinics" className="nav-link" style={navLinkStyle}>Vet Clinics</Link>
             <Link to="/forum" className="nav-link" style={navLinkStyle}>Forum</Link>
+            <Link to="/pet-videos" className="nav-link" style={navLinkStyle}>🎥 Pet Videos</Link>
             <Link to="/faq" className="nav-link" style={navLinkStyle}>FAQ</Link>
 
             {currentUser ? (
