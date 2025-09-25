@@ -1,5 +1,5 @@
 // src/components/common/Navbar.js
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 
@@ -8,6 +8,42 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const navMenuRef = useRef(null);
+
+  // Check scroll position to show/hide arrows
+  const checkScrollPosition = () => {
+    if (navMenuRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = navMenuRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  // Initialize scroll position check
+  useEffect(() => {
+    checkScrollPosition();
+    window.addEventListener('resize', checkScrollPosition);
+    return () => window.removeEventListener('resize', checkScrollPosition);
+  }, []);
+
+  // Re-check scroll position when menu items change (auth state)
+  useEffect(() => {
+    setTimeout(checkScrollPosition, 100);
+  }, [currentUser]);
+
+  const scrollLeft = () => {
+    if (navMenuRef.current) {
+      navMenuRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (navMenuRef.current) {
+      navMenuRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
 
   async function handleLogout() {
     try {
@@ -27,15 +63,8 @@ function Navbar() {
     display: 'flex',
     alignItems: 'center',
     textDecoration: 'none',
-    minWidth: '150px', // Ensure brand has minimum space
-  };
-
-  const navMenuStyle = {
-    display: 'flex',
-    gap: '1.2rem', // Slightly reduced gap to fit more items
-    alignItems: 'center',
-    flexWrap: 'nowrap', // Prevent wrapping
-    overflow: 'hidden', // Hide overflow if needed
+    minWidth: '150px',
+    flexShrink: 0, // Prevent brand from shrinking
   };
 
   const navbarStyle = {
@@ -43,11 +72,11 @@ function Navbar() {
     top: 0,
     left: 0,
     width: '100%',
-    padding: '1rem 2rem', // Increased vertical padding
+    padding: '1rem 2rem',
     backgroundColor: '#1a1a1a',
     zIndex: 1000,
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-    minHeight: '80px', // Set minimum height for navbar
+    minHeight: '80px',
   };
 
   const navContainerStyle = {
@@ -55,9 +84,78 @@ function Navbar() {
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    maxWidth: '1400px', // Increased max width to accommodate more items
+    maxWidth: '1400px',
     margin: '0 auto',
     height: '100%',
+    gap: '1rem',
+  };
+
+  const navMenuWrapperStyle = {
+    position: 'relative',
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    minWidth: 0, // Allow shrinking
+  };
+
+  const navMenuStyle = {
+    display: 'flex',
+    gap: '1.2rem',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    padding: '0.5rem 0.5rem',
+    margin: '-0.5rem 0',
+    flex: 1,
+    minWidth: 0,
+    WebkitOverflowScrolling: 'touch',
+  };
+
+  // Hide scrollbar for Webkit browsers
+  const hideScrollbarStyle = `
+    .nav-menu::-webkit-scrollbar {
+      display: none;
+    }
+  `;
+
+  const scrollButtonStyle = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(255, 255, 255, 0.9)',
+    border: 'none',
+    borderRadius: '50%',
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 1001,
+    fontSize: '1rem',
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+    transition: 'all 0.3s ease',
+    opacity: 0.8,
+  };
+
+  const leftScrollButtonStyle = {
+    ...scrollButtonStyle,
+    left: '5px',
+  };
+
+  const rightScrollButtonStyle = {
+    ...scrollButtonStyle,
+    right: '5px',
+  };
+
+  const scrollButtonHoverStyle = {
+    opacity: 1,
+    transform: 'translateY(-50%) scale(1.1)',
   };
 
   const navLinkStyle = {
@@ -71,6 +169,7 @@ function Navbar() {
     transition: 'all 0.3s ease',
     position: 'relative',
     zIndex: 1,
+    flexShrink: 0, // Prevent links from shrinking
   };
 
   const navLinkHoverStyle = {
@@ -93,6 +192,7 @@ function Navbar() {
     textDecoration: 'none',
     fontSize: '0.9rem',
     whiteSpace: 'nowrap',
+    flexShrink: 0, // Prevent button from shrinking
   };
 
   const btnLinkStyle = {
@@ -108,10 +208,11 @@ function Navbar() {
     transition: 'all 0.3s ease',
     position: 'relative',
     zIndex: 1,
+    flexShrink: 0, // Prevent button from shrinking
   };
 
   const navbarSpacerStyle = {
-    height: '100px' // Increased to match the larger navbar
+    height: '100px'
   };
 
   // Helper function to get link style based on active and hover state
@@ -144,62 +245,111 @@ function Navbar() {
 
   return (
     <>
+      <style>{hideScrollbarStyle}</style>
       <nav className="navbar" style={navbarStyle}>
         <div className="nav-container" style={navContainerStyle}>
           <div className="nav-brand">
             <Link to="/" style={brandStyle}>🐾 PawPals</Link>
           </div>
 
-          <div className="nav-menu" style={navMenuStyle}>
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/browse-pets">Browse Pets</NavLink>
-            <NavLink to="/events">Events</NavLink>
-            <NavLink to="/pet-walk-tracker">🚶‍♂️ Walk Tracker</NavLink>
-            <NavLink to="/vetclinics">Vet Clinics</NavLink>
-            <NavLink to="/forum">Forum</NavLink>
-            <NavLink to="/pet-videos">🎥 Pet Videos</NavLink>
-            <NavLink to="/faq">FAQ</NavLink>
+          <div className="nav-menu-wrapper" style={navMenuWrapperStyle}>
+            {/* Left Scroll Button */}
+            {showLeftArrow && (
+              <button 
+                className="scroll-button left"
+                style={leftScrollButtonStyle}
+                onClick={scrollLeft}
+                onMouseEnter={(e) => {
+                  e.target.style.opacity = '1';
+                  e.target.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.opacity = '0.8';
+                  e.target.style.transform = 'translateY(-50%) scale(1)';
+                }}
+                aria-label="Scroll left"
+              >
+                ‹
+              </button>
+            )}
 
-            {currentUser ? (
-              <>
-                <NavLink to="/my-pets">My Pets</NavLink>
-                <NavLink to="/profile">Profile</NavLink>
-                <button 
-                  onClick={handleLogout} 
-                  style={{
-                    ...btnLinkStyle,
-                    ...(hoveredItem === 'signout' ? navLinkHoverStyle : {})
-                  }}
-                  onMouseEnter={() => setHoveredItem('signout')}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <NavLink to="/login">Sign In</NavLink>
-                <Link 
-                  to="/register" 
-                  style={{
-                    ...btnPrimaryStyle,
-                    ...(hoveredItem === 'register' ? { 
-                      backgroundColor: '#e55a2b', 
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 16px rgba(255, 112, 67, 0.4)'
-                    } : {})
-                  }}
-                  onMouseEnter={() => setHoveredItem('register')}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  Join
-                </Link>
-              </>
+            {/* Navigation Menu with Horizontal Scroll */}
+            <div 
+              className="nav-menu" 
+              ref={navMenuRef}
+              style={navMenuStyle}
+              onScroll={checkScrollPosition}
+            >
+              <NavLink to="/">Home</NavLink>
+              <NavLink to="/browse-pets">Browse Pets</NavLink>
+              <NavLink to="/events">Events</NavLink>
+              <NavLink to="/pet-walk-tracker">🚶‍♂️ Walk Tracker</NavLink>
+              <NavLink to="/vetclinics">Vet Clinics</NavLink>
+              <NavLink to="/forum">Forum</NavLink>
+              <NavLink to="/pet-videos">🎥 Pet Videos</NavLink>
+              <NavLink to="/faq">FAQ</NavLink>
+
+              {currentUser ? (
+                <>
+                  <NavLink to="/my-pets">My Pets</NavLink>
+                  <NavLink to="/profile">Profile</NavLink>
+                  <button 
+                    onClick={handleLogout} 
+                    style={{
+                      ...btnLinkStyle,
+                      ...(hoveredItem === 'signout' ? navLinkHoverStyle : {})
+                    }}
+                    onMouseEnter={() => setHoveredItem('signout')}
+                    onMouseLeave={() => setHoveredItem(null)}
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/login">Sign In</NavLink>
+                  <Link 
+                    to="/register" 
+                    style={{
+                      ...btnPrimaryStyle,
+                      ...(hoveredItem === 'register' ? { 
+                        backgroundColor: '#e55a2b', 
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 16px rgba(255, 112, 67, 0.4)'
+                      } : {})
+                    }}
+                    onMouseEnter={() => setHoveredItem('register')}
+                    onMouseLeave={() => setHoveredItem(null)}
+                  >
+                    Join
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Right Scroll Button */}
+            {showRightArrow && (
+              <button 
+                className="scroll-button right"
+                style={rightScrollButtonStyle}
+                onClick={scrollRight}
+                onMouseEnter={(e) => {
+                  e.target.style.opacity = '1';
+                  e.target.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.opacity = '0.8';
+                  e.target.style.transform = 'translateY(-50%) scale(1)';
+                }}
+                aria-label="Scroll right"
+              >
+                ›
+              </button>
             )}
           </div>
         </div>
       </nav>
-      <div style={navbarSpacerStyle}></div> {/* This spacer prevents content from hiding behind navbar */}
+      <div style={navbarSpacerStyle}></div>
     </>
   );
 }
