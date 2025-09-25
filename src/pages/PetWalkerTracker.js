@@ -101,11 +101,10 @@ const PetWalkTracker = () => {
     return (distance / 1000) / (timeInSeconds / 3600);
   };
 
-  // Calculate calories burned (simplified formula)
-  const calculateCalories = (distanceKm, petWeight, timeHours) => {
-    // Rough calculation: 0.5 calories per kg per km for dogs
-    if (!petWeight) return 0;
-    return Math.round(distanceKm * petWeight * 0.5);
+  // Calculate calories burned (simplified formula - removed weight dependency)
+  const calculateCalories = (distanceKm, timeHours) => {
+    // Simplified calculation: approximately 50 calories per km for average pet walking
+    return Math.round(distanceKm * 50);
   };
 
   // Get pet avatar based on pet data
@@ -178,10 +177,10 @@ const PetWalkTracker = () => {
                 setMaxSpeed(prev => Math.max(prev, segmentSpeed));
               }
               
-              // Update calories
+              // Update calories (removed weight dependency)
               const distanceKm = newDistance / 1000;
               const timeHours = elapsedTime / 3600;
-              setCalories(calculateCalories(distanceKm, selectedPet?.weight, timeHours));
+              setCalories(calculateCalories(distanceKm, timeHours));
               
               return newDistance;
             });
@@ -287,76 +286,107 @@ const PetWalkTracker = () => {
           
           <div className="p-6">
             {!currentUser ? (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">🔒</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign In Required</h3>
-                <p className="text-gray-600">Please sign in to access your registered pets for walk tracking.</p>
+              <div className="text-center py-12 px-6">
+                <div className="text-8xl mb-6">🔒</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Sign In Required</h3>
+                <p className="text-gray-600 text-lg max-w-md mx-auto">Please sign in to access your registered pets for walk tracking.</p>
               </div>
             ) : isLoadingPets ? (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">⏳</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Your Pets...</h3>
-                <p className="text-gray-600">Fetching your registered pets from the database.</p>
+              <div className="text-center py-12 px-6">
+                <div className="animate-spin text-8xl mb-6">⏳</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Loading Your Pets...</h3>
+                <p className="text-gray-600 text-lg max-w-md mx-auto">Fetching your registered pets from the database.</p>
               </div>
             ) : userPets.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">🐕</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pets Registered</h3>
-                <p className="text-gray-600 mb-4">You need to register your pets first before you can track walks.</p>
+              <div className="text-center py-12 px-6">
+                <div className="text-8xl mb-6">🐕</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Pets Registered</h3>
+                <p className="text-gray-600 text-lg mb-6 max-w-md mx-auto">You need to register your pets first before you can track walks.</p>
                 <a 
                   href="/my-pets" 
-                  className="inline-block bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+                  className="inline-block bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg"
                 >
                   Register Your Pets
                 </a>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {userPets.map(pet => (
-                  <button
+                  <div
                     key={pet.id}
                     onClick={() => setSelectedPet(pet)}
-                    className={`group relative p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                    className={`group relative cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 transform hover:scale-105 ${
                       selectedPet?.id === pet.id 
-                        ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg ring-4 ring-purple-100' 
-                        : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-md'
+                        ? 'ring-4 ring-purple-400 shadow-2xl' 
+                        : 'shadow-lg hover:shadow-xl'
                     }`}
                   >
-                    {/* Selection indicator */}
+                    {/* Card Background with Gradient */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${
+                      selectedPet?.id === pet.id
+                        ? 'from-purple-400 via-purple-500 to-indigo-600'
+                        : 'from-blue-400 via-purple-500 to-indigo-600'
+                    } opacity-90`}>
+                    </div>
+                    
+                    {/* Glass Effect Overlay */}
+                    <div className="absolute inset-0 bg-white bg-opacity-10 backdrop-blur-sm"></div>
+                    
+                    {/* Selection Check */}
                     {selectedPet?.id === pet.id && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      <div className="absolute top-4 right-4 z-20 w-8 h-8 bg-white bg-opacity-90 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        </div>
                       </div>
                     )}
                     
-                    {/* Pet Avatar */}
-                    <div className="text-center mb-4">
-                      <div className="text-5xl mb-2 transform group-hover:scale-110 transition-transform duration-200">
-                        {getPetAvatar(pet)}
+                    {/* Card Content */}
+                    <div className="relative z-10 p-6 text-white text-center h-full flex flex-col justify-between min-h-[200px]">
+                      {/* Pet Avatar */}
+                      <div className="flex-shrink-0 mb-4">
+                        <div className="text-6xl mb-3 transform group-hover:scale-110 transition-transform duration-300">
+                          {getPetAvatar(pet)}
+                        </div>
+                        <div className="w-16 h-1 bg-white bg-opacity-60 rounded-full mx-auto"></div>
                       </div>
-                      <div className="w-16 h-1 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full mx-auto opacity-60"></div>
+                      
+                      {/* Pet Details */}
+                      <div className="flex-grow flex flex-col justify-center">
+                        <h3 className="text-xl font-bold mb-2 text-white drop-shadow-lg">
+                          {pet.name}
+                        </h3>
+                        <p className="text-white text-opacity-90 mb-3 font-medium">
+                          {pet.breed}
+                        </p>
+                        
+                        {/* Pet Info Tags */}
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <span className="bg-white bg-opacity-20 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full border border-white border-opacity-30">
+                            {pet.age ? `${pet.age} years` : 'Age TBD'}
+                          </span>
+                          <span className="bg-white bg-opacity-20 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full border border-white border-opacity-30">
+                            {pet.petType || 'Pet'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Selection Indicator */}
+                      <div className={`mt-4 py-2 px-4 rounded-full text-sm font-semibold transition-all duration-200 ${
+                        selectedPet?.id === pet.id
+                          ? 'bg-white text-purple-600 shadow-lg'
+                          : 'bg-white bg-opacity-20 text-white border border-white border-opacity-30'
+                      }`}>
+                        {selectedPet?.id === pet.id ? 'Selected' : 'Select Pet'}
+                      </div>
                     </div>
                     
-                    {/* Pet Details */}
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">{pet.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{pet.breed}</p>
-                      <div className="flex justify-center gap-4 text-xs text-gray-500">
-                        <span className="bg-gray-100 px-2 py-1 rounded-full">
-                          {pet.age ? `${pet.age} years` : 'Age not specified'}
-                        </span>
-                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
-                          {pet.weight ? `${pet.weight} kg` : 'Weight TBD'}
-                        </span>
-                      </div>
+                    {/* Shine Effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transform -skew-x-12 translate-x-full group-hover:-translate-x-full transition-transform duration-1000"></div>
                     </div>
-                    
-                    {/* Hover effect overlay */}
-                    <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity duration-200 ${
-                      selectedPet?.id === pet.id ? 'bg-purple-500' : 'bg-indigo-500'
-                    }`}></div>
-                  </button>
-                ))}
+                  </div>
+                ))}                
               </div>
             )}
           </div>
@@ -425,8 +455,6 @@ const PetWalkTracker = () => {
                         <div className="flex items-center gap-2 text-blue-800">
                           <MapPin size={20} />
                           <div>
-                            <h3 className="font-semibold">Ready to Track</h3>
-                            <p className="text-sm">Click "Start Walk" to begin GPS tracking</p>
                           </div>
                         </div>
                       </div>
@@ -436,13 +464,13 @@ const PetWalkTracker = () => {
               </div>
             </div>
 
-            {/* Controls and Stats - matching form container style */}
+            {/* Controls and Stats - Fixed Layout Issues */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
                 {/* Control Panel */}
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                   <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
-                    <h3 className="text-xl font-semibold text-white">Walk Controls</h3>
+
                   </div>
                   <div className="p-6">
                     {!isTracking ? (
@@ -478,76 +506,121 @@ const PetWalkTracker = () => {
                   </div>
                 </div>
 
-                {/* Stats Panel */}
+                {/* Stats Panel - Fixed Overlapping Text with Proper Spacing */}
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                   <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
                     <h3 className="text-xl font-semibold text-white">Walk Statistics</h3>
                   </div>
                   <div className="p-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-gray-50 rounded-xl">
-                        <Clock size={24} className="text-blue-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-gray-900">
-                          {formatTime(elapsedTime)}
-                        </div>
-                        <div className="text-sm text-gray-600">Duration</div>
+                    {/* Duration */}
+                    <div className="text-center p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 mb-4">
+                      <Clock size={28} className="text-blue-500 mx-auto mb-3" />
+                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                        {formatTime(elapsedTime)}
                       </div>
-                      
-                      <div className="text-center p-4 bg-gray-50 rounded-xl">
-                        <Route size={24} className="text-green-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-gray-900">
-                          {(distance / 1000).toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-600">Distance (km)</div>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-gray-50 rounded-xl">
-                        <Zap size={24} className="text-orange-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-gray-900">
-                          {averageSpeed.toFixed(1)}
-                        </div>
-                        <div className="text-sm text-gray-600">Avg Speed (km/h)</div>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-gray-50 rounded-xl">
-                        <Heart size={24} className="text-red-500 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-gray-900">
-                          {calories}
-                        </div>
-                        <div className="text-sm text-gray-600">Calories</div>
-                      </div>
+                      <div className="text-sm text-gray-600 font-medium">Duration</div>
                     </div>
                     
+                    {/* Distance */}
+                    <div className="text-center p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 mb-4">
+                      <Route size={28} className="text-green-500 mx-auto mb-3" />
+                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                        {(distance / 1000).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-600 font-medium">Distance (km)</div>
+                    </div>
+                    
+                    {/* Average Speed */}
+                    <div className="text-center p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 mb-4">
+                      <Zap size={28} className="text-orange-500 mx-auto mb-3" />
+                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                        {averageSpeed.toFixed(1)}
+                      </div>
+                      <div className="text-sm text-gray-600 font-medium">Avg Speed (km/h)</div>
+                    </div>
+                    
+                    {/* Calories */}
+                    <div className="text-center p-5 bg-gradient-to-br from-red-50 to-red-100 rounded-xl border border-red-200 mb-4">
+                      <Heart size={28} className="text-red-500 mx-auto mb-3" />
+                      <div className="text-3xl font-bold text-gray-900 mb-2">
+                        {calories}
+                      </div>
+                      <div className="text-sm text-gray-600 font-medium">Calories</div>
+                    </div>
+                    
+                    {/* Max Speed Display */}
                     {maxSpeed > 0 && (
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-sm text-blue-800">
-                          🏃‍♂️ Max Speed: <span className="font-semibold">{maxSpeed.toFixed(1)} km/h</span>
+                      <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg text-center">
+                        <div className="text-sm text-indigo-800 font-medium">
+                          Max Speed: <span className="font-bold">{maxSpeed.toFixed(1)} km/h</span>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Pet Info Panel */}
+                {/* Pet Selection Button - Premium Design */}
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                   <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
-                    <h3 className="text-xl font-semibold text-white">Walking with</h3>
+                    <h3 className="text-xl font-semibold text-white">Walking Partner</h3>
                   </div>
                   <div className="p-6">
-                    <div className="flex items-center gap-4">
-                      <span className="text-5xl">{getPetAvatar(selectedPet)}</span>
-                      <div>
-                        <div className="text-xl font-bold text-gray-900 mb-1">
-                          {selectedPet?.name || 'No pet selected'}
-                        </div>
-                        <div className="text-gray-600 mb-1">
-                          {selectedPet?.breed || 'Unknown breed'}
-                        </div>
-                        <div className="text-sm text-purple-600 font-medium">
-                          Weight: {selectedPet?.weight || 'Not specified'} kg
-                        </div>
+                    {/* Current Pet Display */}
+                    <div className="text-center mb-4">
+                      <div className="text-6xl mb-3">{getPetAvatar(selectedPet)}</div>
+                      <div className="text-xl font-bold text-gray-900 mb-1">
+                        {selectedPet?.name || 'No pet selected'}
+                      </div>
+                      <div className="text-gray-600 mb-3">
+                        {selectedPet?.breed || 'Unknown breed'}
+                      </div>
+                      <div className="flex justify-center gap-2 mb-4">
+                        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">
+                          {selectedPet?.age ? `${selectedPet.age} years` : 'Age TBD'}
+                        </span>
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
+                          {selectedPet?.petType || 'Pet'}
+                        </span>
                       </div>
                     </div>
+
+                    {/* Change Pet Button */}
+                    <button
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      className="group w-full relative overflow-hidden bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600 hover:from-purple-600 hover:via-indigo-600 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      {/* Button Background Animation */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -translate-x-full group-hover:translate-x-full transition-all duration-1000"></div>
+                      
+                      {/* Button Content */}
+                      <div className="relative flex items-center justify-center gap-3">
+                        <span className="text-2xl">🔄</span>
+                        <div>
+                          <div className="font-bold text-lg">Change Pet</div>
+                          <div className="text-purple-100 text-sm">Select a different walking partner</div>
+                        </div>
+                      </div>
+                      
+                      {/* Glow Effect */}
+                      <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-purple-400 to-indigo-400 blur-xl -z-10 transform scale-110"></div>
+                    </button>
+
+                    {/* Additional Pet Stats */}
+                    {isTracking && (
+                      <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200">
+                        <div className="text-center">
+                          <div className="text-sm text-green-800 font-medium mb-1">
+                            Currently Walking
+                          </div>
+                          <div className="text-lg font-bold text-green-900">
+                            {selectedPet?.name}
+                          </div>
+                          <div className="text-xs text-green-600 mt-1">
+                            {isPaused ? 'Paused' : 'Active Tracking'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

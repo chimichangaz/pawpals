@@ -222,33 +222,32 @@ function Events() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      {/* Header */}
+      {/* Header - Centered */}
       <div className="bg-white shadow-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <span className="text-4xl">🐾</span>
-                Community Events
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Create and discover pet-friendly events in your area
-              </p>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 flex items-center justify-center gap-3">
+              <span className="text-5xl">🐾</span>
+              Community Events
+            </h1>
+            <p className="text-gray-600 mt-3 text-lg max-w-2xl mx-auto">
+              Create and discover pet-friendly events in your area
+            </p>
             
-            {/* Cleanup Stats & Manual Trigger */}
-            <div className="text-right text-sm text-gray-500">
+            {/* Cleanup Stats & Manual Trigger - Centered below motto */}
+            <div className="mt-4 flex flex-col items-center space-y-2">
               {cleanupStats.lastCleanup && (
-                <div className="mb-2">
-                  <div>Last cleanup: {cleanupStats.lastCleanup}</div>
-                  <div>Events cleaned: {cleanupStats.cleaned}</div>
+                <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+                  <span className="font-medium">Last cleanup:</span> {cleanupStats.lastCleanup} • 
+                  <span className="font-medium ml-2">Events cleaned:</span> {cleanupStats.cleaned}
                 </div>
               )}
               <button
                 onClick={handleManualCleanup}
-                className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs hover:bg-red-200 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-700 transition-all duration-200 transform hover:scale-105 flex items-center gap-2 text-sm font-medium"
               >
-                🗑️ Manual Cleanup
+                <span className="text-base">🗑️</span>
+                Manual Cleanup
               </button>
             </div>
           </div>
