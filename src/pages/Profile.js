@@ -1,10 +1,12 @@
-// src/pages/Profile.js - COMPLETE VERSION with Enhanced Background
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from 'firebase/auth';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { uploadImage, uploadImageAsBase64, testSupabaseConnection } from '../services/supabase';
+
+// Template header image provided by the user
+const HEADER_IMAGE = 'https://cdn.builder.io/api/v1/image/assets%2F720f9bd9b6b54adcb9360f64c8dfc2e3%2F11bfc152cc7f40b183bb9bb7412564e9?format=webp&width=800';
 
 function Profile() {
   const { currentUser, userProfile, getUserProfile } = useAuth();
@@ -14,19 +16,15 @@ function Profile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadMethod, setUploadMethod] = useState('supabase');
-  
+
   const [formData, setFormData] = useState({
     displayName: '',
     bio: '',
-    location: {
-      city: '',
-      state: ''
-    },
+    location: { city: '', state: '' },
     interests: [],
     profileImage: ''
   });
 
-  // Load user data when component mounts or userProfile changes
   useEffect(() => {
     if (currentUser && userProfile) {
       setFormData({
@@ -42,8 +40,39 @@ function Profile() {
     }
   }, [currentUser, userProfile]);
 
+  // stats (pets fetched from Firestore if available)
+  const [petsCount, setPetsCount] = useState(userProfile?.pets?.length || 0);
+  const [eventsCount, setEventsCount] = useState(userProfile?.events?.length || 0);
+  const [badgesCount, setBadgesCount] = useState(userProfile?.badges?.length || 0);
+
+  useEffect(() => {
+    // update counts from userProfile when it changes
+    setEventsCount(userProfile?.events?.length || 0);
+    setBadgesCount(userProfile?.badges?.length || 0);
+
+    async function fetchPetsCount() {
+      if (!currentUser) return;
+      try {
+        // try to read from user's doc first (if pets array exists)
+        if (userProfile?.pets?.length >= 0) {
+          setPetsCount(userProfile.pets.length);
+          return;
+        }
+        // fallback: query 'pets' collection where ownerId == currentUser.uid
+        const petsCol = collection(db, 'pets');
+        const q = query(petsCol, where('ownerId', '==', currentUser.uid));
+        const snapshot = await getDocs(q);
+        setPetsCount(snapshot.size || 0);
+      } catch (err) {
+        console.error('Failed to fetch pets count:', err);
+      }
+    }
+
+    fetchPetsCount();
+  }, [currentUser, userProfile]);
+
   const petInterests = [
-    'Dogs', 'Cats', 'Birds', 'Rabbits', 'Fish', 'Reptiles', 
+    'Dogs', 'Cats', 'Birds', 'Rabbits', 'Fish', 'Reptiles',
     'Training', 'Grooming', 'Veterinary Care', 'Pet Photography',
     'Pet Sitting', 'Dog Walking', 'Rescue Work', 'Breeding',
     'Agility Training', 'Pet Nutrition', 'Pet Travel'
@@ -51,25 +80,12 @@ function Profile() {
 
   function handleChange(e) {
     const { name, value } = e.target;
-    
     if (name.includes('.')) {
-      // Handle nested properties like location.city
       const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
+      setFormData(prev => ({ ...prev, [parent]: { ...prev[parent], [child]: value } }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-    
-    // Clear messages when user starts typing
     if (error) setError('');
     if (success) setSuccess('');
   }
@@ -81,60 +97,34 @@ function Profile() {
         ? prev.interests.filter(i => i !== interest)
         : [...prev.interests, interest]
     }));
+    if (error) setError('');
+    if (success) setSuccess('');
   }
 
   async function handleImageUpload(e) {
-    const file = e.target.files[0];
+    const file = e.target.files && e.target.files[0];
     if (!file) return;
-
-    console.log('=== PROFILE IMAGE UPLOAD START ===');
-    console.log('Selected file:', file);
-    
     try {
       setUploading(true);
       setError('');
-      
       let imageUrl;
-      
       try {
-        // First try Supabase upload
-        console.log('Attempting Supabase upload...');
         const isConnected = await testSupabaseConnection();
-        if (!isConnected) {
-          throw new Error('Supabase connection failed');
-        }
-        
+        if (!isConnected) throw new Error('Supabase connection failed');
         imageUrl = await uploadImage(file, 'profiles');
         setUploadMethod('supabase');
-        console.log('Supabase upload successful:', imageUrl);
-        
       } catch (supabaseError) {
-        console.log('Supabase upload failed, trying base64 fallback:', supabaseError);
-        
-        // Fallback to base64 if Supabase fails
         try {
           imageUrl = await uploadImageAsBase64(file);
           setUploadMethod('base64');
-          console.log('Base64 upload successful');
-          
         } catch (base64Error) {
-          console.error('Both upload methods failed:', base64Error);
           throw new Error('Unable to upload image. Please try a smaller file or try again later.');
         }
       }
-      
-      setFormData(prev => ({
-        ...prev,
-        profileImage: imageUrl
-      }));
-      
-      // Clear the file input
+      setFormData(prev => ({ ...prev, profileImage: imageUrl }));
       e.target.value = '';
-      console.log('=== PROFILE IMAGE UPLOAD SUCCESS ===');
-      
-    } catch (error) {
-      console.error('=== PROFILE IMAGE UPLOAD ERROR ===', error);
-      setError(error.message || 'Failed to upload image. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -142,103 +132,66 @@ function Profile() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
     if (!formData.displayName.trim()) {
       setError('Display name is required');
       return;
     }
-
-    console.log('=== PROFILE UPDATE START ===');
-    console.log('Form data:', formData);
-    console.log('Current user:', currentUser);
 
     try {
       setLoading(true);
       setError('');
       setSuccess('');
 
-      // First, ensure the user document exists in Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
-      
       try {
         const userDoc = await getDoc(userDocRef);
+        const payload = {
+          email: currentUser.email,
+          displayName: formData.displayName.trim(),
+          bio: formData.bio.trim(),
+          location: {
+            city: formData.location.city.trim(),
+            state: formData.location.state.trim()
+          },
+          interests: formData.interests,
+          profileImage: formData.profileImage,
+          uploadMethod: uploadMethod,
+          updatedAt: new Date()
+        };
         if (!userDoc.exists()) {
-          console.log('User document does not exist, creating it...');
-          // Create the document first
-          await setDoc(userDocRef, {
-            email: currentUser.email,
-            displayName: formData.displayName.trim(),
-            bio: formData.bio.trim(),
-            location: {
-              city: formData.location.city.trim(),
-              state: formData.location.state.trim()
-            },
-            interests: formData.interests,
-            profileImage: formData.profileImage,
-            uploadMethod: uploadMethod,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          console.log('User document created successfully');
+          await setDoc(userDocRef, { ...payload, createdAt: new Date() });
         } else {
-          console.log('User document exists, updating...');
-          // Update existing document
-          await updateDoc(userDocRef, {
-            displayName: formData.displayName.trim(),
-            bio: formData.bio.trim(),
-            location: {
-              city: formData.location.city.trim(),
-              state: formData.location.state.trim()
-            },
-            interests: formData.interests,
-            profileImage: formData.profileImage,
-            uploadMethod: uploadMethod,
-            updatedAt: new Date()
-          });
-          console.log('User document updated successfully');
+          await updateDoc(userDocRef, payload);
         }
       } catch (firestoreError) {
-        console.error('Firestore update error:', firestoreError);
         throw new Error(`Database update failed: ${firestoreError.message}`);
       }
 
-      // Then update Firebase Auth profile (separate try-catch)
       try {
-        console.log('Updating Firebase Auth profile...');
         await updateProfile(auth.currentUser, {
           displayName: formData.displayName.trim(),
-          photoURL: formData.profileImage
+          photoURL: formData.profileImage || null
         });
-        console.log('Firebase Auth profile updated successfully');
       } catch (authError) {
-        console.error('Firebase Auth update error:', authError);
-        // Don't throw here - Firestore update succeeded
-        console.log('Auth update failed but Firestore succeeded, continuing...');
+        // ignore auth update errors
       }
 
-      // Refresh the user profile in context
       try {
         await getUserProfile(currentUser.uid);
-        console.log('User profile refreshed successfully');
       } catch (refreshError) {
-        console.error('Profile refresh error:', refreshError);
-        // Don't throw - the main update succeeded
+        // ignore
       }
-      
+
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
-      console.log('=== PROFILE UPDATE SUCCESS ===');
-
-    } catch (error) {
-      console.error('=== PROFILE UPDATE ERROR ===', error);
-      setError(error.message || 'Failed to update profile. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
   }
 
   function cancelEdit() {
-    // Reset form data to original values
     if (currentUser && userProfile) {
       setFormData({
         displayName: currentUser.displayName || '',
@@ -258,12 +211,12 @@ function Profile() {
 
   if (!currentUser) {
     return (
-      <div className="profile-page-background">
-        <div className="page-container">
-          <div className="empty-state">
-            <h3>Please sign in to view your profile</h3>
-            <p>You need to be logged in to access your profile page.</p>
-            <a href="/login" className="btn btn-primary">Sign In</a>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-50 flex items-center justify-center py-12">
+        <div className="max-w-3xl w-full px-6">
+          <div className="rounded-2xl bg-white/80 backdrop-blur-md p-10 shadow-2xl border border-white/30 text-center">
+            <h3 className="text-2xl font-semibold text-gray-800">Please sign in to view your profile</h3>
+            <p className="text-gray-600 mt-2">You need to be logged in to access your profile page.</p>
+            <a href="/login" className="inline-block mt-6 px-6 py-2 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-semibold shadow">Sign In</a>
           </div>
         </div>
       </div>
@@ -271,251 +224,170 @@ function Profile() {
   }
 
   return (
-    <div className="profile-page-background">
-      <div className="page-container">
-        <div className="page-header">
-          <div>
-            <h1>My Profile</h1>
-            <p>Manage your PawPals profile and preferences</p>
-          </div>
-          {!isEditing && (
-            <button 
-              onClick={() => setIsEditing(true)} 
-              className="btn btn-primary"
-            >
-              Edit Profile
-            </button>
-          )}
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-50 py-12">
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Central template card */}
+        <div className="relative rounded-3xl bg-white shadow-2xl border border-gray-100 overflow-hidden">
 
-        {error && (
-          <div className="error-message">{error}</div>
-        )}
+          {/* Header gradient bar (template) */}
+          <div className="h-16 bg-gradient-to-r from-indigo-100 via-rose-50 to-amber-50"></div>
 
-        {success && (
-          <div className="success-message">
-            {success}
-          </div>
-        )}
+          {/* Avatar overlaps header - template style */}
+          <div className="p-6 pt-0">
+            <div className="-mt-12 flex items-start justify-between">
+              <div className="flex items-center gap-6">
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gray-100">
+                  {formData.profileImage ? (
+                    <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-4xl font-semibold">{formData.displayName ? formData.displayName.charAt(0).toUpperCase() : 'U'}</div>
+                  )}
+                </div>
 
-        <div className="profile-container">
-          {isEditing ? (
-            <div className="profile-edit-form">
-              <form onSubmit={handleSubmit}>
-                {/* Profile Image Section */}
-                <div className="profile-image-section">
-                  <div className="current-profile-image">
-                    {formData.profileImage ? (
-                      <img 
-                        src={formData.profileImage} 
-                        alt="Profile"
-                        className="profile-image-large"
-                        onError={(e) => {
-                          console.log('Image failed to load:', formData.profileImage);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="profile-placeholder-large">
-                        <span className="profile-initials">
-                          {formData.displayName ? formData.displayName.charAt(0).toUpperCase() : 'U'}
-                        </span>
+                <div className="pt-4">
+                  <h2 className="text-2xl font-bold text-gray-800">{formData.displayName || 'No name set'}</h2>
+                  <p className="text-sm text-gray-600 mt-1">{currentUser.email}</p>
+                  {formData.location.city && (
+                    <p className="text-sm text-gray-500 mt-1">📍 {formData.location.city}{formData.location.state && `, ${formData.location.state}`}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {!isEditing ? (
+                  <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-medium shadow">Edit</button>
+                ) : (
+                  <button onClick={cancelEdit} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700">Cancel</button>
+                )}
+                <label htmlFor="profileImage" className={`cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-gray-200 text-gray-700 shadow ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
+                  {uploading ? 'Uploading...' : 'Change'}
+                </label>
+                <input id="profileImage" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+              </div>
+            </div>
+
+            {/* Card content: form or display grid */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {isEditing ? (
+                <form onSubmit={handleSubmit} className="col-span-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-600">Full Name</label>
+                      <input name="displayName" value={formData.displayName} onChange={handleChange} className="mt-1 w-full rounded-lg border border-gray-200 p-2.5 focus:ring-2 focus:ring-emerald-200" placeholder="Your full name" required maxLength={50} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Location (City)</label>
+                      <input name="location.city" id="location.city" value={formData.location.city} onChange={handleChange} className="mt-1 w-full rounded-lg border border-gray-200 p-2.5 focus:ring-2 focus:ring-emerald-200" placeholder="City" maxLength={50} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">State / Region</label>
+                      <input name="location.state" id="location.state" value={formData.location.state} onChange={handleChange} className="mt-1 w-full rounded-lg border border-gray-200 p-2.5 focus:ring-2 focus:ring-emerald-200" placeholder="State / Region" maxLength={50} />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-gray-600">About</label>
+                      <textarea name="bio" value={formData.bio} onChange={handleChange} rows={4} className="mt-1 w-full rounded-lg border border-gray-200 p-2.5 focus:ring-2 focus:ring-emerald-200" placeholder="A short description about you and your pets"></textarea>
+                      <div className="text-xs text-gray-400 mt-1">{formData.bio.length}/1000</div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-gray-600">Interests</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {petInterests.map(interest => (
+                          <label key={interest} className={`flex items-center gap-2 px-3 py-1 rounded-lg border ${formData.interests.includes(interest) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-700'}`}>
+                            <input type="checkbox" checked={formData.interests.includes(interest)} onChange={() => handleInterestToggle(interest)} className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm">{interest}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                    <button type="submit" disabled={loading || uploading} className="px-6 py-2 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-semibold shadow">{loading ? 'Saving...' : 'Save Changes'}</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="lg:col-span-1 space-y-3">
+                    <div className="flex items-start justify-between gap-6">
+                      <div>
+                        <div className="text-xs text-gray-500">Full Name</div>
+                        <div className="text-lg text-gray-900 font-semibold">{formData.displayName || '—'}</div>
+                        <div className="text-xs text-gray-500 mt-2">{currentUser.email}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Member since</div>
+                        <div className="text-base text-gray-800">{auth.currentUser?.metadata?.creationTime ? new Date(auth.currentUser.metadata.creationTime).toLocaleDateString() : '—'}</div>
+                        {formData.location.city && <div className="mt-2 text-sm text-gray-600">📍 {formData.location.city}{formData.location.state && `, ${formData.location.state}`}</div>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">About</div>
+                      <div className="mt-2 text-sm text-gray-700">{formData.bio || 'No bio yet.'}</div>
+                    </div>
+
+                    {formData.interests.length > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-500">Interests</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {formData.interests.map(i => (
+                            <span key={i} className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm border border-emerald-100">{i}</span>
+                          ))}
+                        </div>
+
                       </div>
                     )}
                   </div>
-                  
-                  <div className="image-upload-section">
-                    <label htmlFor="profileImage" className="btn btn-secondary">
-                      {uploading ? 'Uploading...' : 'Change Photo'}
-                    </label>
-                    <input
-                      type="file"
-                      id="profileImage"
-                      accept="image/jpeg,image/png,image/jpg,image/webp"
-                      onChange={handleImageUpload}
-                      disabled={uploading}
-                      style={{ display: 'none' }}
-                    />
-                    <small>
-                      • Supported formats: JPG, PNG, WebP<br/>
-                      • Maximum size: 5MB<br/>
-                      • Images will be automatically optimized
-                    </small>
-                  </div>
-                </div>
 
-                {/* Basic Info */}
-                <div className="form-section">
-                  <h3>Basic Information</h3>
-                  
-                  <div className="form-group">
-                    <label htmlFor="displayName">Display Name *</label>
-                    <input
-                      type="text"
-                      id="displayName"
-                      name="displayName"
-                      value={formData.displayName}
-                      onChange={handleChange}
-                      required
-                      maxLength={50}
-                    />
-                  </div>
+                  <div className="lg:col-span-1 space-y-4">
+                    <div className="bg-white/50 border border-white/30 p-6 rounded-xl flex flex-col justify-between h-full">
+                      <h4 className="text-sm font-semibold text-gray-800">Activity & Stats</h4>
+                      <div className="mt-4 grid grid-cols-3 gap-6 text-center items-center">
+                        <div>
+                          <div className="text-xs text-gray-500">Pets</div>
+                          <div className="text-3xl md:text-4xl font-extrabold text-gray-800">{petsCount}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Events</div>
+                          <div className="text-3xl md:text-4xl font-extrabold text-gray-800">{eventsCount}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">Badges</div>
+                          <div className="text-3xl md:text-4xl font-extrabold text-gray-800">{badgesCount}</div>
+                        </div>
+                      </div>
 
-                  <div className="form-group">
-                    <label htmlFor="bio">Bio</label>
-                    <textarea
-                      id="bio"
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleChange}
-                      rows="4"
-                      maxLength={500}
-                      placeholder="Tell other pet owners about yourself..."
-                    />
-                    <small>{formData.bio.length}/500 characters</small>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="form-section">
-                  <h3>Location</h3>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="location.city">City</label>
-                      <input
-                        type="text"
-                        id="location.city"
-                        name="location.city"
-                        value={formData.location.city}
-                        onChange={handleChange}
-                        maxLength={50}
-                        placeholder="Enter your city"
-                      />
                     </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="location.state">State/Region</label>
-                      <input
-                        type="text"
-                        id="location.state"
-                        name="location.state"
-                        value={formData.location.state}
-                        onChange={handleChange}
-                        maxLength={50}
-                        placeholder="Enter your state or region"
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Interests */}
-                <div className="form-section">
-                  <h3>Pet Interests</h3>
-                  <p className="form-description">
-                    Select your pet-related interests to connect with like-minded owners
-                  </p>
-                  <div className="interests-grid">
-                    {petInterests.map(interest => (
-                      <label key={interest} className="interest-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={formData.interests.includes(interest)}
-                          onChange={() => handleInterestToggle(interest)}
-                        />
-                        <span>{interest}</span>
-                      </label>
-                    ))}
                   </div>
-                </div>
-
-                {/* Form Actions */}
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    onClick={cancelEdit}
-                    className="btn btn-secondary"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    disabled={loading || uploading}
-                  >
-                    {loading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
+                </>
+              )}
             </div>
-          ) : (
-            <div className="profile-view">
-              <div className="profile-header">
-                <div className="profile-image-container">
-                  {formData.profileImage ? (
-                    <img 
-                      src={formData.profileImage} 
-                      alt="Profile"
-                      className="profile-image-large"
-                      onError={(e) => {
-                        console.log('Profile view image failed to load');
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="profile-placeholder-large">
-                      <span className="profile-initials">
-                        {formData.displayName ? formData.displayName.charAt(0).toUpperCase() : 'U'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="profile-info">
-                  <h2>{formData.displayName || 'No name set'}</h2>
-                  <p className="profile-email">{currentUser.email}</p>
-                  {formData.location.city && (
-                    <p className="profile-location">
-                      📍 {formData.location.city}
-                      {formData.location.state && `, ${formData.location.state}`}
-                    </p>
-                  )}
-                </div>
+
+            {/* Shared action row to align buttons horizontally */}
+            <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="flex flex-col gap-3">
+                <button onClick={() => setIsEditing(true)} className="w-full text-sm px-4 py-3 rounded-md bg-gradient-to-r from-teal-600 to-cyan-500 text-white">Edit Profile</button>
+                <label htmlFor="profileImage" className="w-full text-sm inline-flex items-center justify-center px-4 py-3 rounded-md bg-white border border-gray-200 text-gray-700 cursor-pointer">Change Photo</label>
               </div>
-
-              {formData.bio && (
-                <div className="profile-section">
-                  <h3>About Me</h3>
-                  <p className="profile-bio">{formData.bio}</p>
-                </div>
-              )}
-
-              {formData.interests.length > 0 && (
-                <div className="profile-section">
-                  <h3>Pet Interests</h3>
-                  <div className="interests-display">
-                    {formData.interests.map(interest => (
-                      <span key={interest} className="interest-tag">
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="profile-actions">
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="btn btn-primary"
-                >
-                  Edit Profile
-                </button>
-                <a href="/my-pets" className="btn btn-secondary">
-                  My Pets
-                </a>
+              <div className="flex flex-col gap-3">
+                <a href="/my-pets" className="w-full text-sm inline-flex items-center justify-center px-4 py-3 rounded-md bg-emerald-50 text-emerald-700">View Pets</a>
+                <a href="/events" className="w-full text-sm inline-flex items-center justify-center px-4 py-3 rounded-md bg-white border border-gray-200">Browse Events</a>
               </div>
             </div>
-          )}
+
+            {/* Success / Error messages */}
+            {(error || success) && (
+              <div className="mt-6">
+                {error && <div className="text-sm text-red-700 bg-red-50 border border-red-100 p-3 rounded-lg">{error}</div>}
+                {success && <div className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 p-3 rounded-lg">{success}</div>}
+              </div>
+            )}
+
+
+          </div>
         </div>
       </div>
     </div>
