@@ -1,4 +1,3 @@
-// src/pages/Login.js
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -8,7 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, signInWithGoogle } = useAuth(); // ✅ added Google function
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -34,6 +33,19 @@ export default function Login() {
       console.error('Login error:', error);
     }
     
+    setLoading(false);
+  }
+
+  // ✅ Google sign-in handler
+  async function handleGoogleSignIn() {
+    try {
+      setLoading(true);
+      await signInWithGoogle();
+      navigate('/');
+    } catch (error) {
+      setError('Failed to sign in with Google.');
+      console.error(error);
+    }
     setLoading(false);
   }
 
@@ -111,9 +123,10 @@ export default function Login() {
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
 
+              {/* ✅ Updated Google button */}
               <button
                 type="button"
-                onClick={() => alert('Google sign-in coming soon!')}
+                onClick={handleGoogleSignIn}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary/90 px-4 py-2.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <GoogleIcon className="h-4 w-4" /> Sign in with Google
