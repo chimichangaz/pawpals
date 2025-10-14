@@ -5,10 +5,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth, db, googleProvider } from '../services/firebase';
 
 const AuthContext = createContext();
 
@@ -21,25 +22,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Sign up function
+  // Sign up function (email/password)
   async function signup(email, password, displayName) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Update display name
     await updateProfile(user, { displayName });
     
-    // Create user profile in Firestore
     await setDoc(doc(db, 'users', user.uid), {
       email: user.email,
       displayName: displayName,
       profileImage: '',
       bio: '',
-      location: {
-        city: '',
-        state: '',
-        coordinates: null
-      },
+      location: { city: '', state: '', coordinates: null },
       interests: [],
       createdAt: new Date(),
       lastActive: new Date()
@@ -48,7 +43,7 @@ export function AuthProvider({ children }) {
     return userCredential;
   }
 
-  // Login function
+  // Login function (email/password)
   function login(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
   }
@@ -68,6 +63,47 @@ export function AuthProvider({ children }) {
     return null;
   }
 
+  // Google Sign-In
+  async function signInWithGoogle() {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // New Google user → create profile
+        await setDoc(userDocRef, {
+          email: user.email,
+          displayName: user.displayName || '',
+          profileImage: user.photoURL || '',
+          bio: '',
+          location: { city: '', state: '', coordinates: null },
+          interests: [],
+          createdAt: new Date(),
+          lastActive: new Date()
+        });
+      }
+
+      setCurrentUser(user);
+      setUserProfile(userDoc.exists() ? userDoc.data() : {
+        email: user.email,
+        displayName: user.displayName || '',
+        profileImage: user.photoURL || '',
+        bio: '',
+        location: { city: '', state: '', coordinates: null },
+        interests: [],
+        createdAt: new Date(),
+        lastActive: new Date()
+      });
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      throw error;
+    }
+  }
+
+  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -88,7 +124,8 @@ export function AuthProvider({ children }) {
     signup,
     login,
     logout,
-    getUserProfile
+    getUserProfile,
+    signInWithGoogle  // ✅ Added Google login
   };
 
   return (

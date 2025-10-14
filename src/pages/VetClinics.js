@@ -69,37 +69,40 @@ export default function VetClinics() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-xl bg-white">
-              <MapContainer
-                center={[12.9165, 77.6101]}
-                zoom={12}
-                style={{ height: "520px", width: "100%" }}
-                className="rounded-2xl"
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                />
+              {/* Added wrapper with zIndex */}
+              <div style={{ height: 520, position: 'relative', zIndex: 1 }}>
+                <MapContainer
+                  center={[12.9165, 77.6101]}
+                  zoom={12}
+                  style={{ height: "100%", width: "100%" }}
+                  className="rounded-2xl"
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+                  />
 
-                {clinics.map((clinic) => (
-                  <Marker key={clinic.id} position={[clinic.lat, clinic.lng]} icon={clinicIcon}>
-                    <Popup className="text-sm">
-                      <div className="p-2">
-                        <h3 className="font-semibold text-emerald-600 mb-1">
-                          <a href={clinic.mapLink} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                            {clinic.name}
-                          </a>
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-2">{clinic.address}</p>
-                        <div className="flex items-center gap-2">
-                          <a href={`tel:${clinic.phone || ''}`} className="text-sm text-emerald-600 hover:underline">Call</a>
-                          <a href={clinic.mapLink} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline">Directions</a>
-                          <a href={`https://www.google.com/search?q=${encodeURIComponent(clinic.name + ' ' + clinic.address)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline">Search</a>
+                  {clinics.map((clinic) => (
+                    <Marker key={clinic.id} position={[clinic.lat, clinic.lng]} icon={clinicIcon}>
+                      <Popup className="text-sm">
+                        <div className="p-2">
+                          <h3 className="font-semibold text-emerald-600 mb-1">
+                            <a href={clinic.mapLink} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {clinic.name}
+                            </a>
+                          </h3>
+                          <p className="text-gray-600 text-sm mb-2">{clinic.address}</p>
+                          <div className="flex items-center gap-2">
+                            <a href={`tel:${clinic.phone || ''}`} className="text-sm text-emerald-600 hover:underline">Call</a>
+                            <a href={clinic.mapLink} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline">Directions</a>
+                            <a href={`https://www.google.com/search?q=${encodeURIComponent(clinic.name + ' ' + clinic.address)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-600 hover:underline">Search</a>
+                          </div>
                         </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
             </div>
           </div>
 
