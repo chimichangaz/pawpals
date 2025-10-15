@@ -516,7 +516,7 @@ export default function Events() {
               </MapContainer>
             </div>
           </div>
-        </div>
+        </div>                             
       </div>
     </div>
   );
