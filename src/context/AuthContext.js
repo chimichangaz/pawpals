@@ -9,7 +9,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../services/firebase';
+import { auth, db, googleProvider, githubProvider } from '../services/firebase'; // ✅ added githubProvider
 
 const AuthContext = createContext();
 
@@ -22,13 +22,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Sign up function (email/password)
+  // Email/password sign up
   async function signup(email, password, displayName) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
+
     await updateProfile(user, { displayName });
-    
+
     await setDoc(doc(db, 'users', user.uid), {
       email: user.email,
       displayName: displayName,
@@ -39,16 +39,16 @@ export function AuthProvider({ children }) {
       createdAt: new Date(),
       lastActive: new Date()
     });
-    
+
     return userCredential;
   }
 
-  // Login function (email/password)
+  // Email/password login
   function login(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  // Logout function
+  // Logout
   function logout() {
     return signOut(auth);
   }
@@ -63,31 +63,13 @@ export function AuthProvider({ children }) {
     return null;
   }
 
-  // Google Sign-In
-  async function signInWithGoogle() {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+  // ✅ Helper to create user profile if new
+  async function ensureUserProfile(user) {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
 
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        // New Google user → create profile
-        await setDoc(userDocRef, {
-          email: user.email,
-          displayName: user.displayName || '',
-          profileImage: user.photoURL || '',
-          bio: '',
-          location: { city: '', state: '', coordinates: null },
-          interests: [],
-          createdAt: new Date(),
-          lastActive: new Date()
-        });
-      }
-
-      setCurrentUser(user);
-      setUserProfile(userDoc.exists() ? userDoc.data() : {
+    if (!userDoc.exists()) {
+      const newProfile = {
         email: user.email,
         displayName: user.displayName || '',
         profileImage: user.photoURL || '',
@@ -96,14 +78,41 @@ export function AuthProvider({ children }) {
         interests: [],
         createdAt: new Date(),
         lastActive: new Date()
-      });
+      };
+      await setDoc(userDocRef, newProfile);
+      setUserProfile(newProfile);
+    } else {
+      setUserProfile(userDoc.data());
+    }
+  }
+
+  // ✅ Google Sign-In
+  async function signInWithGoogle() {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      await ensureUserProfile(user);
+      setCurrentUser(user);
     } catch (error) {
       console.error('Google sign-in error:', error);
       throw error;
     }
   }
 
-  // Listen for auth state changes
+  // ✅ GitHub Sign-In
+  async function signInWithGitHub() {
+    try {
+      const result = await signInWithPopup(auth, githubProvider);
+      const user = result.user;
+      await ensureUserProfile(user);
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('GitHub sign-in error:', error);
+      throw error;
+    }
+  }
+
+  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -125,7 +134,8 @@ export function AuthProvider({ children }) {
     login,
     logout,
     getUserProfile,
-    signInWithGoogle  // ✅ Added Google login
+    signInWithGoogle,
+    signInWithGitHub // ✅ added GitHub login
   };
 
   return (

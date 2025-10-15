@@ -16,7 +16,7 @@ import VetClinics from './pages/VetClinics';          // ✅ Import Vet Clinics
 import PetVideos from './pages/PetVideos';           // ✅ Import Pet Videos
 import FAQ from './pages/FAQ';                       // ✅ Import FAQ
 import './App.css';
-import './styles/base.css';
+import './styles/base.css';               
 import './styles/pets.css';
 import './styles/forum.css';
 import PetChatbot from './components/PetChatbot';

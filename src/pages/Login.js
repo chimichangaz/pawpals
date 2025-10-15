@@ -7,12 +7,11 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, signInWithGoogle } = useAuth(); // ✅ added Google function
+  const { login, signInWithGoogle, signInWithGitHub } = useAuth(); // ✅ match AuthContext
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
     try {
       setError('');
       setLoading(true);
@@ -32,11 +31,9 @@ export default function Login() {
       }
       console.error('Login error:', error);
     }
-    
     setLoading(false);
   }
 
-  // ✅ Google sign-in handler
   async function handleGoogleSignIn() {
     try {
       setLoading(true);
@@ -44,6 +41,18 @@ export default function Login() {
       navigate('/');
     } catch (error) {
       setError('Failed to sign in with Google.');
+      console.error(error);
+    }
+    setLoading(false);
+  }
+
+  async function handleGithubSignIn() {
+    try {
+      setLoading(true);
+      await signInWithGitHub();
+      navigate('/');
+    } catch (error) {
+      setError('Failed to sign in with GitHub.');
       console.error(error);
     }
     setLoading(false);
@@ -77,10 +86,9 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {/* Email input */}
               <div>
-                <label htmlFor="email" className="sr-only">
-                  Email
-                </label>
+                <label htmlFor="email" className="sr-only">Email</label>
                 <input
                   id="email"
                   name="email"
@@ -93,10 +101,9 @@ export default function Login() {
                 />
               </div>
 
+              {/* Password input */}
               <div>
-                <label htmlFor="password" className="sr-only">
-                  Password
-                </label>
+                <label htmlFor="password" className="sr-only">Password</label>
                 <input
                   id="password"
                   name="password"
@@ -115,6 +122,7 @@ export default function Login() {
                 </p>
               </div>
 
+              {/* Sign in button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -123,7 +131,7 @@ export default function Login() {
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
 
-              {/* ✅ Updated Google button */}
+              {/* Google Sign-In */}
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -132,12 +140,13 @@ export default function Login() {
                 <GoogleIcon className="h-4 w-4" /> Sign in with Google
               </button>
 
+              {/* GitHub Sign-In */}
               <button
                 type="button"
-                onClick={() => alert('Facebook sign-in coming soon!')}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-muted px-4 py-2.5 text-sm font-medium text-foreground shadow hover:bg-muted/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={handleGithubSignIn}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-gray-800 px-4 py-2.5 text-sm font-medium text-white shadow hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <FacebookIcon className="h-4 w-4" /> Sign in with Facebook
+                <GithubIcon className="h-4 w-4" /> Sign in with GitHub
               </button>
             </form>
           </div>
@@ -147,6 +156,7 @@ export default function Login() {
   );
 }
 
+// Icons
 function GoogleIcon({ className = "" }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -158,10 +168,14 @@ function GoogleIcon({ className = "" }) {
   );
 }
 
-function FacebookIcon({ className = "" }) {
+function GithubIcon({ className = "" }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-      <path d="M22 12a10 10 0 1 0-11.6 9.87v-6.98H7.9V12h2.5V9.8c0-2.46 1.47-3.83 3.72-3.83 1.08 0 2.21.19 2.21.19v2.43h-1.25c-1.23 0-1.62.77-1.62 1.56V12h2.76l-.44 2.89h-2.32v6.98A10 10 0 0 0 22 12z" className="fill-foreground/80" />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.4-3.9-1.4-.5-1.2-1.2-1.5-1.2-1.5-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 .1 1.7-.5 2-.8.1-.8.4-1.3.8-1.6-2.5-.3-5.2-1.2-5.2-5.5 0-1.2.4-2.1 1.1-2.8-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 2.9 1.1.8-.2 1.6-.3 2.5-.3.9 0 1.7.1 2.5.3 2-1.4 2.9-1.1 2.9-1.1.6 1.5.2 2.6.1 2.9.7.7 1.1 1.7 1.1 2.8 0 4.3-2.7 5.2-5.2 5.5.4.4.8 1 .8 2v3c0 .3.2.7.8.6C20.7 21.4 24 17.1 24 12c0-6.35-5.15-11.5-12-11.5z"
+      />
     </svg>
   );
 }
