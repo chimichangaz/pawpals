@@ -413,13 +413,14 @@ const PetWalkTracker = () => {
                   </div>
                 </div>
 
-                <div className="relative">
-                  <div style={{ height: "500px" }} className="w-full">
-                    <MapContainer
-                      center={getMapCenter()}
-                      zoom={15}
-                      style={{ height: "100%", width: "100%" }}
-                    >
+                <div className="relative" style={{ zIndex: 1 }}>
+  <div style={{ height: "500px" }} className="w-full">
+    <MapContainer
+      center={getMapCenter()}
+      zoom={15}
+      style={{ height: "100%", width: "100%" }}
+    >
+
                       <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
