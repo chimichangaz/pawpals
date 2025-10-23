@@ -1,7 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import React, { useEffect, useState, useRef } from "react";
 import {
   collection,
   addDoc,
@@ -22,30 +19,34 @@ import {
 import { db } from "../services/firebase";
 import { useAuth } from "../context/AuthContext";
 import { sendEmailVerification } from "firebase/auth";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet default marker icons
+// Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// icons
-const eventIcon = new L.Icon({
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// Custom icon for event markers (red)
+const eventIcon = L.divIcon({
+  className: 'custom-event-marker',
+  html: '<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><div style="transform: rotate(45deg); margin-top: 5px; margin-left: 7px; font-size: 16px;">📍</div></div>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30]
 });
 
-const newEventIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// Custom icon for selected location (green)
+const selectedIcon = L.divIcon({
+  className: 'custom-selected-marker',
+  html: '<div style="background-color: #22c55e; width: 35px; height: 35px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 3px 7px rgba(0,0,0,0.4);"><div style="transform: rotate(45deg); margin-top: 6px; margin-left: 8px; font-size: 18px;">✅</div></div>',
+  iconSize: [35, 35],
+  iconAnchor: [17, 35],
+  popupAnchor: [0, -35]
 });
 
 // Verification Banner Component
@@ -88,7 +89,6 @@ const VerificationBanner = ({ currentUser, onVerifyEmail }) => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Email Verification Status */}
             {!currentUser.emailVerified && (
               <button
                 onClick={onVerifyEmail}
@@ -100,7 +100,6 @@ const VerificationBanner = ({ currentUser, onVerifyEmail }) => {
           </div>
         </div>
 
-        {/* Verification Requirements */}
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           {!currentUser.emailVerified && (
             <div className="flex items-center gap-2 text-amber-700">
@@ -117,7 +116,6 @@ const VerificationBanner = ({ currentUser, onVerifyEmail }) => {
           )}
         </div>
 
-        {/* Full Name Reminder */}
         {!userProfile?.displayName && (
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-blue-700 text-sm">
@@ -146,40 +144,30 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
     ev.enrolledUsers.some(user => user.userId === currentUser.uid);
   
   const enrolledCount = ev.enrolledUsers ? ev.enrolledUsers.length : 0;
-  
-  // Get first few enrolled users for display - with safe access
   const displayEnrolledUsers = ev.enrolledUsers ? ev.enrolledUsers.slice(0, 3) : [];
 
-  // Safe function to get display name
   const getDisplayName = (user) => {
     if (!user) return 'Unknown';
     return user.displayName || (user.email ? user.email.split('@')[0] : 'User');
   };
 
-  // Safe function to get host display name
   const getHostDisplayName = (email) => {
     if (!email) return 'Unknown';
     return email.split('@')[0];
   };
 
-  // Check if user can enroll (verified email)
   const canEnroll = currentUser?.emailVerified;
 
   return (
-    <article 
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2"
-    >
-      {/* Image Container */}
+    <article className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2">
       <div className="relative h-64 overflow-hidden bg-gray-900">
         <img 
           src={imageUrl}
           alt={ev.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
-        {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
-        {/* Date Badge */}
         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg">
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-900">
@@ -191,7 +179,6 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
           </div>
         </div>
 
-        {/* Bottom Info Overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-5">
           <div className="flex items-center gap-2 text-white/90 text-sm mb-2">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -207,7 +194,6 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
         </div>
       </div>
 
-      {/* Content Section */}
       <div className="p-5 bg-white">
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
           {ev.description || "No description provided."}
@@ -223,7 +209,6 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
             </span>
           </div>
 
-          {/* Enrollment Info */}
           <div className="flex items-center justify-between text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,7 +253,6 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
             )}
           </div>
 
-          {/* Display enrolled users */}
           {displayEnrolledUsers.length > 0 && (
             <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
               <div className="flex items-center gap-1 mb-1">
@@ -308,106 +292,205 @@ const EventCard = React.memo(({ ev, idx, currentUser, onEnroll, onUnenroll, isEn
         </div>
       </div>
 
-      {/* Hover Accent Border */}
       <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500 rounded-2xl transition-all duration-300 pointer-events-none"></div>
     </article>
   );
 });
 
-// Memoized Event Marker Component
-const EventMarker = React.memo(({ event, icon, currentUser, onEnroll, onUnenroll, isEnrolling }) => {
-  const isEnrolled = currentUser && event.enrolledUsers && 
-    event.enrolledUsers.some(user => user.userId === currentUser.uid);
-  
-  const enrolledCount = event.enrolledUsers ? event.enrolledUsers.length : 0;
-
-  // Safe function to get host display name
-  const getHostDisplayName = (email) => {
-    if (!email) return 'Unknown';
-    return email.split('@')[0];
-  };
-
-  // Check if user can enroll
-  const canEnroll = currentUser?.emailVerified;
-
-  return (
-    <Marker position={[event.coords.lat, event.coords.lng]} icon={icon}>
-      <Popup>
-        <div className="max-w-xs">
-          <h3 className="font-semibold text-gray-800 mb-1">{event.name}</h3>
-          <p className="text-sm text-gray-600 mb-2">{event.description}</p>
-          <div className="text-xs text-gray-500 mb-2">
-            {event.datetime?.toDate ? event.datetime.toDate().toLocaleString() : "Date not available"}
-          </div>
-          <div className="text-xs text-gray-500 mb-3">
-            <strong>{enrolledCount}</strong> people enrolled
-          </div>
-          <div className="mt-2 text-xs text-gray-500">Host: {getHostDisplayName(event.createdby)}</div>
-          
-          {currentUser && event.createdby !== currentUser.email && (
-            <>
-              {canEnroll ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isEnrolled) {
-                      onUnenroll(event.id);
-                    } else {
-                      onEnroll(event.id);
-                    }
-                  }}
-                  disabled={isEnrolling[event.id]}
-                  className={`w-full mt-2 px-3 py-1 rounded text-xs font-medium transition-all ${
-                    isEnrolled 
-                      ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                  } disabled:opacity-50`}
-                >
-                  {isEnrolling[event.id] ? '...' : isEnrolled ? 'Unenroll' : 'Enroll'}
-                </button>
-              ) : (
-                <div className="w-full mt-2 px-3 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700 text-center">
-                  Verify email to enroll
-                </div>
-              )}
-            </>
-          )}
-          
-          {currentUser && event.createdby === currentUser.email && (
-            <div className="w-full mt-2 px-3 py-1 rounded text-xs font-medium bg-green-100 text-green-700 text-center">
-              Your Event
-            </div>
-          )}
-        </div>
-      </Popup>
-    </Marker>
-  );
-});
-
-// Memoized Selected Location Marker
-const SelectedMarker = React.memo(({ location, icon }) => (
-  <Marker position={[location.lat, location.lng]} icon={icon}>
-    <Popup>
-      <div className="text-center">
-        <div className="text-lg">📍</div>
-        <div className="font-semibold text-red-600">New Event Location</div>
-      </div>
-    </Popup>
-  </Marker>
-));
-
-const MapClickHandler = React.memo(({ onMapClick }) => {
+// Map Click Handler Component
+const MapClickHandler = ({ onLocationSelect }) => {
   useMapEvents({
-    click: (e) => onMapClick(e.latlng),
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onLocationSelect({ lat, lng, address: `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}` });
+    },
   });
   return null;
-});
+};
+
+// Location Picker Component for Leaflet
+const LocationPicker = ({ onLocationSelect, selectedLocation, events }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const mapRef = useRef(null);
+
+  console.log("LocationPicker received events:", events); // Debug log
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    try {
+      // Using Nominatim (OpenStreetMap's geocoding service) - Free and no API key required
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        setSearchResults(data);
+      } else {
+        setSearchResults([]);
+        alert("No results found. Try a different search term.");
+      }
+    } catch (error) {
+      console.error("Error searching locations:", error);
+      alert("Error searching for location. Please try again.");
+    }
+  };
+
+  const handleResultClick = (result) => {
+    const location = {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      address: result.display_name
+    };
+    onLocationSelect(location);
+    setSearchResults([]);
+    setSearchQuery(result.display_name);
+
+    // Pan map to selected location
+    if (mapRef.current) {
+      mapRef.current.setView([location.lat, location.lng], 14);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search for a location (e.g., Cubbon Park, Bangalore)..."
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+        />
+        <button
+          onClick={handleSearch}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Search
+        </button>
+      </div>
+
+      {/* Search Results */}
+      {searchResults.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg max-h-48 overflow-y-auto shadow-md">
+          {searchResults.map((result, index) => (
+            <div
+              key={index}
+              className="p-3 border-b border-gray-100 hover:bg-indigo-50 cursor-pointer transition-colors"
+              onClick={() => handleResultClick(result)}
+            >
+              <div className="font-medium text-sm text-gray-800">{result.display_name}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Interactive Leaflet Map */}
+      <div className="rounded-lg overflow-hidden border-2 border-gray-300 shadow-lg" style={{ height: '400px', width: '100%', position: 'relative', zIndex: 1 }}>
+        <MapContainer 
+          center={selectedLocation ? [selectedLocation.lat, selectedLocation.lng] : [12.9716, 77.5946]} 
+          zoom={selectedLocation ? 14 : 11}
+          style={{ height: '100%', width: '100%' }}
+          ref={mapRef}
+          zoomControl={true}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <MapClickHandler onLocationSelect={onLocationSelect} />
+          
+          {/* Show all event markers */}
+          {events && events.length > 0 && events.map((event, index) => {
+            console.log("Rendering marker for event:", event.name, event.coords); // Debug log
+            return event.coords && event.coords.lat && event.coords.lng ? (
+              <Marker 
+                key={event.id} 
+                position={[event.coords.lat, event.coords.lng]}
+                icon={eventIcon}
+              >
+                <Popup>
+                  <div style={{ minWidth: '150px' }}>
+                    <strong style={{ color: '#4f46e5', fontSize: '14px' }}>{event.name}</strong><br />
+                    <span style={{ color: '#6b7280', fontSize: '12px' }}>
+                      {event.datetime?.toDate ? event.datetime.toDate().toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'Date TBD'}
+                    </span><br />
+                    {event.address && (
+                      <span style={{ color: '#9ca3af', fontSize: '11px' }}>{event.address}</span>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            ) : null;
+          })}
+          
+          {/* Show selected location marker */}
+          {selectedLocation && (
+            <Marker 
+              position={[selectedLocation.lat, selectedLocation.lng]}
+              icon={selectedIcon}
+            >
+              <Popup>
+                <strong>Selected Location</strong><br />
+                {selectedLocation.address}
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
+      </div>
+
+      {/* Selected Location Info */}
+      {selectedLocation && (
+        <div className="bg-green-50 border border-green-200 p-4 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-green-700 flex items-center gap-2">
+                <span className="text-lg">📍</span>
+                Location Selected
+              </div>
+              <div className="text-xs text-gray-600 mt-1">
+                Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
+              </div>
+              {selectedLocation.address && (
+                <div className="text-xs text-gray-700 mt-1 font-medium">{selectedLocation.address}</div>
+              )}
+            </div>
+            <button
+              onClick={() => onLocationSelect(null)}
+              className="text-red-600 hover:text-red-700 text-sm font-medium"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs text-gray-500 text-center bg-blue-50 p-2 rounded">
+        💡 <strong>Click anywhere on the map</strong> to select coordinates, or use the search bar above<br/>
+        🔴 Red pins = Existing events ({events?.length || 0}) | 🟢 Green pin = Your selected location
+      </div>
+    </div>
+  );
+};
 
 export default function Events() {
   const { currentUser } = useAuth();
   const [events, setEvents] = useState([]);
-  const [newEvent, setNewEvent] = useState({ name: "", description: "", datetime: "", lat: "", lng: "" });
-  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [newEvent, setNewEvent] = useState({ 
+    name: "", 
+    description: "", 
+    datetime: "", 
+    location: null 
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState({});
   const [cleanupStats, setCleanupStats] = useState({ cleaned: 0, lastCleanup: null });
@@ -487,46 +570,42 @@ export default function Events() {
     };
   }, []);
 
-  const handleMapClick = React.useCallback((latlng) => {
-    setSelectedLocation(latlng);
+  const handleLocationSelect = (location) => {
     setNewEvent(prev => ({ 
       ...prev, 
-      lat: latlng.lat.toFixed(6), 
-      lng: latlng.lng.toFixed(6) 
+      location 
     }));
-  }, []);
-
-  const clearLocation = React.useCallback(() => {
-    setSelectedLocation(null);
-    setNewEvent(prev => ({ ...prev, lat: "", lng: "" }));
-  }, []);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check verification before allowing event creation
     if (!checkUserVerification()) {
       return;
     }
     
     if (!currentUser) return alert("Please sign in to create an event.");
-    if (!newEvent.lat || !newEvent.lng) return alert("Select a location on the map.");
+    if (!newEvent.location) return alert("Please select a location.");
     const eventDate = new Date(newEvent.datetime);
     if (eventDate <= new Date()) return alert("Please choose a future date/time.");
+    
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "events"), {
         name: newEvent.name,
         description: newEvent.description,
         datetime: Timestamp.fromDate(eventDate),
-        coords: { lat: parseFloat(newEvent.lat), lng: parseFloat(newEvent.lng) },
+        coords: { 
+          lat: newEvent.location.lat, 
+          lng: newEvent.location.lng 
+        },
+        address: newEvent.location.address,
         createdby: currentUser.email,
         createdAt: serverTimestamp(),
-        enrolledUsers: [], // Initialize empty enrolled users array
+        enrolledUsers: [],
       });
-      setNewEvent({ name: "", description: "", datetime: "", lat: "", lng: "" });
-      setSelectedLocation(null);
-      alert("Event created!");
+      setNewEvent({ name: "", description: "", datetime: "", location: null });
+      alert("Event created successfully!");
     } catch (err) {
       console.error(err);
       alert("Error creating event");
@@ -535,20 +614,17 @@ export default function Events() {
     }
   };
 
-  // Enhanced enrollment function with user verification - FIXED
   const handleEnroll = async (eventId) => {
     if (!currentUser) {
       alert("Please sign in to enroll in events.");
       return;
     }
 
-    // Check email verification
     if (!currentUser.emailVerified) {
       alert("Please verify your email address before enrolling in events.");
       return;
     }
 
-    // Check if user is already enrolled
     const event = events.find(ev => ev.id === eventId);
     if (event && event.enrolledUsers) {
       const isAlreadyEnrolled = event.enrolledUsers.some(
@@ -560,13 +636,11 @@ export default function Events() {
       }
     }
 
-    // Check if user is trying to enroll in their own event
     if (event && event.createdby === currentUser.email) {
       alert("You're the host of this event!");
       return;
     }
 
-    // Check enrollment limits (optional - set your own limit)
     if (event && event.enrolledUsers && event.enrolledUsers.length >= 100) {
       alert("This event is full!");
       return;
@@ -576,12 +650,10 @@ export default function Events() {
 
     try {
       const eventRef = doc(db, "events", eventId);
-      
-      // Create enrollment object WITHOUT serverTimestamp() - FIXED
       const enrollmentData = {
         userId: currentUser.uid,
         email: currentUser.email,
-        enrolledAt: new Date(), // Use client timestamp instead of serverTimestamp()
+        enrolledAt: new Date(),
         displayName: currentUser.displayName || currentUser.email.split('@')[0]
       };
       
@@ -597,7 +669,6 @@ export default function Events() {
     }
   };
 
-  // Enhanced unenroll function with user verification - FIXED
   const handleUnenroll = async (eventId) => {
     if (!currentUser) return;
 
@@ -613,7 +684,6 @@ export default function Events() {
         return;
       }
       
-      // Find the user's enrollment object to remove
       const userEnrollment = eventData.enrolledUsers.find(
         user => user.userId === currentUser.uid
       );
@@ -636,12 +706,14 @@ export default function Events() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      <div className="pt-16"></div>
+      
       {/* Verification Banner */}
       <VerificationBanner currentUser={currentUser} onVerifyEmail={handleVerifyEmail} />
 
       {/* Verification Alert Modal */}
       {showVerificationAlert && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-2xl p-6 max-w-md w-full">
             <div className="text-center">
               <div className="text-4xl mb-4">🔒</div>
@@ -700,7 +772,7 @@ export default function Events() {
           </div>
         </div>
 
-        {/* Events cards - displayed at top */}
+        {/* Events cards */}
         {events.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events</h2>
@@ -725,10 +797,10 @@ export default function Events() {
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left column - Form card */}
         <aside className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden sticky top-24">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden sticky top-32">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-3">Create New Event</h2>
-              <p className="text-sm text-gray-500 mb-4">Click on the map to set the location, then fill the form and publish.</p>
+              <p className="text-sm text-gray-500 mb-4">Search for a location on the map, then fill the form and publish.</p>
 
               {!currentUser?.emailVerified && (
                 <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -787,31 +859,6 @@ export default function Events() {
                   <small className="text-xs text-gray-500">Must be a future date</small>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Location</label>
-                  {selectedLocation ? (
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-green-700">Location selected</div>
-                      <div className="text-xs text-gray-600">Lat: {newEvent.lat} • Lng: {newEvent.lng}</div>
-                      <button 
-                        type="button" 
-                        onClick={clearLocation} 
-                        className="mt-2 px-3 py-1 rounded-md bg-white border text-sm"
-                        disabled={!currentUser?.emailVerified}
-                      >
-                        Choose different
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-sm italic text-gray-400">
-                      {currentUser?.emailVerified 
-                        ? "Click the map to pick a location" 
-                        : "Verify email to select location"
-                      }
-                    </div>
-                  )}
-                </div>
-
                 <div className="flex gap-3">
                   <button 
                     disabled={isSubmitting || !currentUser?.emailVerified} 
@@ -822,7 +869,7 @@ export default function Events() {
                   </button>
                   <button 
                     type="button" 
-                    onClick={() => { setNewEvent({ name: "", description: "", datetime: "", lat: "", lng: "" }); setSelectedLocation(null);} } 
+                    onClick={() => setNewEvent({ name: "", description: "", datetime: "", location: null })} 
                     className="rounded-xl bg-white border px-4 py-2"
                   >
                     Cancel
@@ -839,49 +886,53 @@ export default function Events() {
           </div>
         </aside>
 
-        {/* Right: Map */}
+        {/* Right: Leaflet Map Location Picker */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
               <div className="flex items-center gap-3 text-white">
                 <span className="text-2xl">🗺️</span>
                 <div>
-                  <h2 className="text-xl font-semibold">Interactive Map</h2>
-                  <p className="text-blue-100 text-sm">Click to set event location • Showing <strong>{events.length}</strong> markers</p>
+                  <h2 className="text-xl font-semibold">Select Event Location</h2>
+                  <p className="text-blue-100 text-sm">Search for a location or browse the map • Showing <strong>{events.length}</strong> upcoming events</p>
                 </div>
               </div>
             </div>
 
-            <div style={{ height: 520, position: 'relative', zIndex: 1 }}>
-              <MapContainer 
-                center={[12.9716, 77.5946]} 
-                zoom={12} 
-                style={{ height: "100%", width: "100%" }}
-                scrollWheelZoom={true}
-                zoomControl={true}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
-                <MapClickHandler onMapClick={handleMapClick} />
+            <div className="p-6">
+              <LocationPicker 
+                onLocationSelect={handleLocationSelect}
+                selectedLocation={newEvent.location}
+                events={events}
+              />
+            </div>
+          </div>
 
-                {events.map((ev) => (
-                  <EventMarker 
-                    key={ev.id} 
-                    event={ev} 
-                    icon={eventIcon}
-                    currentUser={currentUser}
-                    onEnroll={handleEnroll}
-                    onUnenroll={handleUnenroll}
-                    isEnrolling={isEnrolling}
-                  />
+          {/* Events Location Legend */}
+          {events.length > 0 && (
+            <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Upcoming Event Locations</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {events.map((event, index) => (
+                  <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-900 text-sm truncate">{event.name}</div>
+                      <div className="text-gray-600 text-xs">
+                        {event.datetime?.toDate ? event.datetime.toDate().toLocaleDateString() : 'Date TBD'}
+                      </div>
+                      {event.address && (
+                        <div className="text-gray-500 text-xs line-clamp-2 mt-1">{event.address}</div>
+                      )}
+                    </div>
+                  </div>
                 ))}
-
-                {selectedLocation && (
-                  <SelectedMarker location={selectedLocation} icon={newEventIcon} />
-                )}
-              </MapContainer>
-            </div>                         
-          </div> 
-        </div>                             
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
