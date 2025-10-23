@@ -34,7 +34,7 @@ L.Icon.Default.mergeOptions({
 // Custom icon for event markers (red)
 const eventIcon = L.divIcon({
   className: 'custom-event-marker',
-  html: '<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><div style="transform: rotate(45deg); margin-top: 5px; margin-left: 7px; font-size: 16px;">📍</div></div>',
+  html: '<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); cursor: pointer;"><div style="transform: rotate(45deg); margin-top: 5px; margin-left: 7px; font-size: 16px;">📍</div></div>',
   iconSize: [30, 30],
   iconAnchor: [15, 30],
   popupAnchor: [0, -30]
@@ -43,11 +43,31 @@ const eventIcon = L.divIcon({
 // Custom icon for selected location (green)
 const selectedIcon = L.divIcon({
   className: 'custom-selected-marker',
-  html: '<div style="background-color: #22c55e; width: 35px; height: 35px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 3px 7px rgba(0,0,0,0.4);"><div style="transform: rotate(45deg); margin-top: 6px; margin-left: 8px; font-size: 18px;">✅</div></div>',
+  html: '<div style="background-color: #22c55e; width: 35px; height: 35px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 3px 7px rgba(0,0,0,0.4); cursor: pointer;"><div style="transform: rotate(45deg); margin-top: 6px; margin-left: 8px; font-size: 18px;">✅</div></div>',
   iconSize: [35, 35],
   iconAnchor: [17, 35],
   popupAnchor: [0, -35]
 });
+
+// Custom Marker Component with Tooltip
+const EventMarker = ({ event, icon, onHover, onLeave }) => {
+  return (
+    <Marker 
+      position={[event.coords.lat, event.coords.lng]}
+      icon={icon}
+      eventHandlers={{
+        mouseover: () => {
+          console.log("Marker hovered:", event.name);
+          onHover(event);
+        },
+        mouseout: () => {
+          console.log("Marker left");
+          onLeave();
+        }
+      }}
+    />
+  );
+};
 
 // Verification Banner Component
 const VerificationBanner = ({ currentUser, onVerifyEmail }) => {
@@ -312,6 +332,7 @@ const MapClickHandler = ({ onLocationSelect }) => {
 const LocationPicker = ({ onLocationSelect, selectedLocation, events }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [hoveredEvent, setHoveredEvent] = useState(null);
   const mapRef = useRef(null);
 
   console.log("LocationPicker received events:", events); // Debug log
@@ -404,48 +425,90 @@ const LocationPicker = ({ onLocationSelect, selectedLocation, events }) => {
           />
           <MapClickHandler onLocationSelect={onLocationSelect} />
           
-          {/* Show all event markers */}
-          {events && events.length > 0 && events.map((event, index) => {
-            console.log("Rendering marker for event:", event.name, event.coords); // Debug log
-            return event.coords && event.coords.lat && event.coords.lng ? (
-              <Marker 
-                key={event.id} 
-                position={[event.coords.lat, event.coords.lng]}
-                icon={eventIcon}
-              >
-                <Popup>
-                  <div style={{ minWidth: '150px' }}>
-                    <strong style={{ color: '#4f46e5', fontSize: '14px' }}>{event.name}</strong><br />
-                    <span style={{ color: '#6b7280', fontSize: '12px' }}>
-                      {event.datetime?.toDate ? event.datetime.toDate().toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : 'Date TBD'}
-                    </span><br />
-                    {event.address && (
-                      <span style={{ color: '#9ca3af', fontSize: '11px' }}>{event.address}</span>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ) : null;
-          })}
+          {/* Show all event markers with hover tooltips */}
+          {events && events.length > 0 ? (
+            events.map((event) => {
+              console.log("Checking event:", event.name, "Coords:", event.coords);
+              if (event.coords && typeof event.coords.lat === 'number' && typeof event.coords.lng === 'number') {
+                console.log("✓ Rendering marker for:", event.name, `[${event.coords.lat}, ${event.coords.lng}]`);
+                return (
+                  <EventMarker
+                    key={event.id}
+                    event={event}
+                    icon={eventIcon}
+                    onHover={setHoveredEvent}
+                    onLeave={() => setHoveredEvent(null)}
+                  />
+                );
+              } else {
+                console.log("✗ Skipping event (no valid coords):", event.name);
+                return null;
+              }
+            })
+          ) : (
+            <></>
+          )}
           
           {/* Show selected location marker */}
           {selectedLocation && (
             <Marker 
               position={[selectedLocation.lat, selectedLocation.lng]}
               icon={selectedIcon}
-            >
-              <Popup>
-                <strong>Selected Location</strong><br />
-                {selectedLocation.address}
-              </Popup>
-            </Marker>
+            />
           )}
         </MapContainer>
+
+        {/* Hover Tooltip Display */}
+        {hoveredEvent && (
+          <div 
+            className="absolute top-4 left-4 bg-white rounded-lg shadow-xl p-4 border-2 border-indigo-500 max-w-xs"
+            style={{ 
+              zIndex: 1000,
+              pointerEvents: 'none'
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="text-2xl flex-shrink-0">📍</div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-indigo-600 text-sm mb-1">
+                  {hoveredEvent.name}
+                </h4>
+                <p className="text-gray-600 text-xs mb-2">
+                  {hoveredEvent.datetime?.toDate ? hoveredEvent.datetime.toDate().toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'Date TBD'}
+                </p>
+                {hoveredEvent.description && (
+                  <p className="text-gray-500 text-xs mb-2 line-clamp-2">
+                    {hoveredEvent.description}
+                  </p>
+                )}
+                {hoveredEvent.address && (
+                  <p className="text-gray-400 text-xs mb-2 line-clamp-1">
+                    📍 {hoveredEvent.address}
+                  </p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap">
+                    👥 {hoveredEvent.enrolledUsers?.length || 0} enrolled
+                  </span>
+                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded truncate">
+                    Host: {hoveredEvent.createdby?.split('@')[0]}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Debug Info */}
+      <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded mt-2">
+        📊 Debug: Found {events?.length || 0} events | Hovered: {hoveredEvent ? hoveredEvent.name : 'None'}
       </div>
 
       {/* Selected Location Info */}
@@ -475,7 +538,7 @@ const LocationPicker = ({ onLocationSelect, selectedLocation, events }) => {
       )}
 
       <div className="text-xs text-gray-500 text-center bg-blue-50 p-2 rounded">
-        💡 <strong>Click anywhere on the map</strong> to select coordinates, or use the search bar above<br/>
+        💡 <strong>Hover over pins</strong> to see event details | Click on the map to select a location<br/>
         🔴 Red pins = Existing events ({events?.length || 0}) | 🟢 Green pin = Your selected location
       </div>
     </div>
