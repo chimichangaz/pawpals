@@ -94,3 +94,119 @@ Hugging Face API
 Future-
 
 Flutter / Dart mobile apps (iOS + Android)
+
+
+
+🚀 Setup Instructions
+Prerequisites
+
+Node.js (v14+)
+
+Firebase account
+
+Supabase project
+
+Google Cloud (Gemini API)
+
+Hugging Face account
+
+1. Clone the Repository
+git clone https://github.com/yourusername/pawpals.git
+cd pawpals
+npm install
+
+2. Firebase Setup
+
+Create a project
+
+Enable Authentication
+
+Create a Firestore database
+
+Enable Storage
+
+Copy your Firebase config into firebase.js
+
+3. Supabase Setup
+
+Create a Supabase project
+
+Create a public bucket (e.g., profiles/)
+
+Copy URL + anon key into environment variables
+
+4. API Keys
+
+Gemini API: Google AI Studio
+
+Hugging Face Access Token
+
+5. Environment Variables
+
+Create .env:
+
+# Firebase
+REACT_APP_FIREBASE_API_KEY=your_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_bucket
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
+
+# Supabase
+REACT_APP_SUPABASE_URL=your_url
+REACT_APP_SUPABASE_ANON_KEY=your_key
+
+# AI
+REACT_APP_GEMINI_API_KEY=your_gemini_key
+REACT_APP_HF_TOKEN=your_huggingface_token
+
+6. Firestore Rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /pets/{petId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        resource.data.ownerId == request.auth.uid;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        resource.data.creatorId == request.auth.uid;
+    }
+
+    match /forum/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        resource.data.authorId == request.auth.uid;
+    }
+  }
+}
+
+7. Storage Rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+
+8. Start Development Server
+npm start
+
