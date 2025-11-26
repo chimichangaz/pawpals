@@ -63,7 +63,6 @@ async function moderateImage(file) {
   }
 }
 
-// ---------- Main component ----------
 function Profile() {
   const { currentUser, userProfile, getUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -428,7 +427,7 @@ function Profile() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>                   
                 </>
               )}
             </div>
@@ -444,7 +443,7 @@ function Profile() {
                 <a href="/my-pets" className="w-full text-sm inline-flex items-center justify-center px-4 py-3 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">View Pets</a>
                 <a href="/events" className="w-full text-sm inline-flex items-center justify-center px-4 py-3 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-colors">Browse Events</a>
               </div>
-            </div>
+            </div>                          
 
             {/* Success / Error messages */}
             {(error || success) && (
